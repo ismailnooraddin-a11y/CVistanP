@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useBuilderStore } from '@/store/builder';
 import { Input, Button } from '@/components/ui/FormElements';
+import { renderResumeHtml } from '@/templates/renderer';
 import { t } from '@/i18n/translations';
 import { Download, Mail, Send, UserPlus, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 
@@ -47,7 +48,6 @@ export default function StepFinalize() {
     // Client-side generation fallback using print
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-      const { renderResumeHtml } = require('@/templates/renderer');
       const html = renderResumeHtml(resume, true);
       printWindow.document.write(`
         <!DOCTYPE html>
