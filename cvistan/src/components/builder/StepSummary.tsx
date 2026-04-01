@@ -12,8 +12,9 @@ export default function StepSummary() {
     <div className="space-y-4 animate-fade-in">
       <p className="text-sm text-surface-500">
         {lang === 'ar'
-          ? 'اكتب ملخصاً مهنياً موجزاً يسلط الضوء على خبراتك وأهدافك المهنية.'
-          : 'Write a brief professional summary highlighting your experience and career goals.'}
+          ?  'كتب ملخصاً مهنياً موجزاً يسلط الضوء على خبراتك وأهدافك المهنية.
+مثال: مهندس برمجيات يتمتع بخبرة 3 سنوات في تصميم وتطوير حلول برمجية فعّالة وموثوقة. شغوف بتحسين الأداء، وحل المشكلات المعقدة، وتعلّم التقنيات الحديثة لتطوير المهارات المهنية'
+          : 'Write a brief professional summary highlighting your experience and career goals. Example "Software Engineer with 3 years of experience in designing and building efficient, reliable software solutions. Passionate about improving performance, solving complex problems, and growing through new technologies."'}
       </p>
       <Textarea
         label={t('professional_summary', lang)}
