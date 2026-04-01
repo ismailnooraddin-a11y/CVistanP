@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (pdfBuffer) {
-      return new NextResponse(pdfBuffer, {
+      return new NextResponse(new Uint8Array(pdfBuffer), {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="${resume.personalInfo?.fullName || 'CV'}.pdf"`,
