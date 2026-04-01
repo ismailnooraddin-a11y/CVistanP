@@ -28,7 +28,7 @@ export default function StepPersonalInfo() {
           required
           value={pi.fullName}
           onChange={(e) => updatePersonalInfo({ fullName: e.target.value })}
-          placeholder="John Doe"
+          placeholder="Ahmed Jasm"
         />
         <Input
           label={t('job_title', lang)}
@@ -45,7 +45,7 @@ export default function StepPersonalInfo() {
           type="email"
           value={pi.email}
           onChange={(e) => updatePersonalInfo({ email: e.target.value })}
-          placeholder="john@example.com"
+          placeholder="ahmed.jasm@example.com"
         />
         <Input
           label={t('phone', lang)}
@@ -53,7 +53,7 @@ export default function StepPersonalInfo() {
           required
           value={pi.phone}
           onChange={(e) => updatePersonalInfo({ phone: e.target.value })}
-          placeholder="+1 234 567 8900"
+          placeholder="+964 750 000 0000"
         />
       </div>
 
@@ -62,7 +62,7 @@ export default function StepPersonalInfo() {
         required
         value={pi.location}
         onChange={(e) => updatePersonalInfo({ location: e.target.value })}
-        placeholder="New York, NY, USA"
+        placeholder="Gullan Street, Erbil, Kurdistan"
       />
 
       {/* Photo upload placeholder */}
