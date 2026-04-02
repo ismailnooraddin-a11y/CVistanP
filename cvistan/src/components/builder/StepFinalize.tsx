@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { useBuilderStore } from '@/store/builder';
 import { Input, Button } from '@/components/ui/FormElements';
 import { t } from '@/i18n/translations';
-import { renderResumeHtml } from '@/templates/renderer';
+import { generateResumePdf } from '@/lib/pdf-generator';
 import { generateCoverLetterBlob } from '@/lib/cover-letter';
 import { generateInterviewFaqBlob } from '@/lib/interview-faq';
-import { generatePdfFromHtml, downloadBlob } from '@/lib/download';
+import { downloadBlob } from '@/lib/download';
 import {
   Download, FileText, Mail, Send, UserPlus,
   CheckCircle, AlertCircle, ExternalLink, HelpCircle,
@@ -39,19 +39,7 @@ export default function StepFinalize() {
     setError('');
     setPdfDone(false);
     try {
-      const html = renderResumeHtml(resume, true);
-      const dir = lang === 'ar' ? 'rtl' : 'ltr';
-      const wrappedHtml = `
-        <div dir="${dir}" lang="${lang}" style="width:794px;min-height:1123px;background:white;margin:0;padding:0;">
-          <style>
-            * { box-sizing: border-box; margin: 0; padding: 0; }
-            body, html { margin: 0; padding: 0; }
-          </style>
-          ${html}
-        </div>
-      `;
-      const filename = (pi.fullName || 'CV') + ' - Resume.pdf';
-      await generatePdfFromHtml(wrappedHtml, filename);
+      await generateResumePdf(resume);
       setPdfDone(true);
     } catch (err) {
       console.error('PDF generation error:', err);
