@@ -13,111 +13,130 @@ export function downloadBlob(blob: Blob, filename: string): void {
 }
 
 /**
- * Generates a PDF by rendering HTML in a popup window and using print-to-PDF.
- * This is the most reliable method as the browser handles all CSS rendering.
+ * Generates a PDF from HTML. 
+ * Renders HTML in a visible off-screen container, applies computed styles inline,
+ * then captures with html2pdf.js for auto-download.
  */
 export async function generatePdfFromHtml(html: string, filename: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    try {
-      const printWindow = window.open('', '_blank', 'width=794,height=1123');
-      
-      if (!printWindow) {
-        // Popup blocked — fall back to same-window approach
-        fallbackPrint(html, filename);
-        resolve();
-        return;
-      }
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js');
 
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8"/>
-          <title>${filename}</title>
-          <style>
-            @page { size: A4; margin: 0; }
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { margin: 0; padding: 0; background: white; width: 210mm; }
-            @media print {
-              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            }
-          </style>
-        </head>
-        <body>${html}</body>
-        </html>
-      `);
-      printWindow.document.close();
+  // Step 1: Create a visible but off-screen container
+  const wrapper = document.createElement('div');
+  wrapper.id = 'pdf-render-wrapper';
+  wrapper.style.position = 'absolute';
+  wrapper.style.left = '-10000px';
+  wrapper.style.top = '0';
+  wrapper.style.width = '794px';
+  wrapper.style.background = 'white';
+  wrapper.style.zIndex = '1';
+  wrapper.innerHTML = html;
+  document.body.appendChild(wrapper);
 
-      // Wait for content to render then auto-trigger print
-      printWindow.onload = () => {
-        setTimeout(() => {
-          printWindow.print();
-          // Close after a delay to allow print dialog
-          setTimeout(() => {
-            printWindow.close();
-            resolve();
-          }, 1000);
-        }, 300);
-      };
+  // Step 2: Wait for browser to fully render (fonts, layout)
+  await new Promise((resolve) => setTimeout(resolve, 600));
 
-      // Fallback if onload doesn't fire
-      setTimeout(() => {
-        try {
-          printWindow.print();
-          setTimeout(() => {
-            printWindow.close();
-            resolve();
-          }, 1000);
-        } catch (e) {
-          resolve();
-        }
-      }, 1500);
+  // Step 3: Inline all computed styles so html2canvas can see them
+  inlineAllStyles(wrapper);
 
-    } catch (err) {
-      reject(err);
-    }
-  });
+  // Step 4: Remove the <style> tags (no longer needed, everything is inline now)
+  const styleTags = wrapper.querySelectorAll('style');
+  styleTags.forEach((s) => s.remove());
+
+  // Step 5: Capture with html2pdf
+  try {
+    const html2pdf = (window as any).html2pdf;
+    const totalHeight = wrapper.scrollHeight || 1123;
+
+    await html2pdf()
+      .set({
+        margin: 0,
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+          width: 794,
+          height: totalHeight,
+          windowWidth: 794,
+          backgroundColor: '#ffffff',
+          logging: false,
+          foreignObjectRendering: false,
+        },
+        jsPDF: {
+          unit: 'px',
+          format: [794, 1123],
+          orientation: 'portrait',
+          hotfixes: ['px_scaling'],
+        },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+      })
+      .from(wrapper)
+      .save();
+  } finally {
+    document.body.removeChild(wrapper);
+  }
 }
 
-function fallbackPrint(html: string, filename: string): void {
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = 'none';
-  document.body.appendChild(iframe);
+/**
+ * Recursively applies all computed styles as inline styles on every element.
+ * This makes html2canvas see the styles even without <style> tags.
+ */
+function inlineAllStyles(element: Element): void {
+  const children = element.querySelectorAll('*');
+  
+  const importantProps = [
+    'color', 'background-color', 'background',
+    'font-family', 'font-size', 'font-weight', 'font-style',
+    'text-align', 'text-transform', 'text-decoration', 'letter-spacing',
+    'line-height', 'white-space',
+    'display', 'flex-direction', 'justify-content', 'align-items', 'flex-wrap', 'flex-shrink', 'flex',
+    'width', 'min-width', 'max-width', 'height', 'min-height',
+    'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+    'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+    'border', 'border-top', 'border-right', 'border-bottom', 'border-left',
+    'border-color', 'border-style', 'border-width',
+    'border-radius',
+    'box-sizing', 'overflow',
+    'opacity',
+    'gap',
+    'list-style-type',
+    'direction',
+  ];
 
-  const doc = iframe.contentDocument || iframe.contentWindow?.document;
-  if (doc) {
-    doc.open();
-    doc.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8"/>
-        <title>${filename}</title>
-        <style>
-          @page { size: A4; margin: 0; }
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { margin: 0; padding: 0; background: white; }
-          @media print {
-            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          }
-        </style>
-      </head>
-      <body>${html}</body>
-      </html>
-    `);
-    doc.close();
+  children.forEach((child) => {
+    if (child instanceof HTMLElement) {
+      const computed = window.getComputedStyle(child);
+      let inlineStyle = '';
+      
+      for (const prop of importantProps) {
+        const value = computed.getPropertyValue(prop);
+        if (value && value !== '' && value !== 'none' && value !== 'normal' && value !== 'auto') {
+          // Skip defaults that add noise
+          if (prop === 'display' && value === 'block') continue;
+          if (prop === 'box-sizing' && value === 'content-box') continue;
+          if (prop === 'overflow' && value === 'visible') continue;
+          inlineStyle += `${prop}:${value};`;
+        }
+      }
+      
+      // Preserve existing inline styles (they take priority)
+      const existing = child.getAttribute('style') || '';
+      child.setAttribute('style', inlineStyle + existing);
+    }
+  });
 
-    setTimeout(() => {
-      iframe.contentWindow?.print();
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-      }, 1000);
-    }, 500);
+  // Also inline styles on the root element itself
+  if (element instanceof HTMLElement) {
+    const computed = window.getComputedStyle(element);
+    const existing = element.getAttribute('style') || '';
+    let rootStyle = '';
+    rootStyle += `background:${computed.getPropertyValue('background') || 'white'};`;
+    rootStyle += `color:${computed.getPropertyValue('color')};`;
+    rootStyle += `font-family:${computed.getPropertyValue('font-family')};`;
+    rootStyle += `font-size:${computed.getPropertyValue('font-size')};`;
+    rootStyle += `width:794px;`;
+    element.setAttribute('style', rootStyle + existing);
   }
 }
 
