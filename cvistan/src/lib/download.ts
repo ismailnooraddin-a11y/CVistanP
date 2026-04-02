@@ -13,80 +13,111 @@ export function downloadBlob(blob: Blob, filename: string): void {
 }
 
 /**
- * Generates a PDF from HTML string using html2pdf.js.
- * Auto-downloads the file.
+ * Generates a PDF by rendering HTML in a popup window and using print-to-PDF.
+ * This is the most reliable method as the browser handles all CSS rendering.
  */
 export async function generatePdfFromHtml(html: string, filename: string): Promise<void> {
-  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js');
+  return new Promise((resolve, reject) => {
+    try {
+      const printWindow = window.open('', '_blank', 'width=794,height=1123');
+      
+      if (!printWindow) {
+        // Popup blocked — fall back to same-window approach
+        fallbackPrint(html, filename);
+        resolve();
+        return;
+      }
 
-  // Create an iframe so styles are fully isolated and rendered
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8"/>
+          <title>${filename}</title>
+          <style>
+            @page { size: A4; margin: 0; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { margin: 0; padding: 0; background: white; width: 210mm; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>${html}</body>
+        </html>
+      `);
+      printWindow.document.close();
+
+      // Wait for content to render then auto-trigger print
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.print();
+          // Close after a delay to allow print dialog
+          setTimeout(() => {
+            printWindow.close();
+            resolve();
+          }, 1000);
+        }, 300);
+      };
+
+      // Fallback if onload doesn't fire
+      setTimeout(() => {
+        try {
+          printWindow.print();
+          setTimeout(() => {
+            printWindow.close();
+            resolve();
+          }, 1000);
+        } catch (e) {
+          resolve();
+        }
+      }, 1500);
+
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+function fallbackPrint(html: string, filename: string): void {
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
-  iframe.style.left = '-10000px';
-  iframe.style.top = '0';
-  iframe.style.width = '794px';
-  iframe.style.height = '1123px';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
   iframe.style.border = 'none';
   document.body.appendChild(iframe);
 
-  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-  if (!iframeDoc) {
-    document.body.removeChild(iframe);
-    throw new Error('Could not access iframe document');
-  }
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (doc) {
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8"/>
+        <title>${filename}</title>
+        <style>
+          @page { size: A4; margin: 0; }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { margin: 0; padding: 0; background: white; }
+          @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
+        </style>
+      </head>
+      <body>${html}</body>
+      </html>
+    `);
+    doc.close();
 
-  iframeDoc.open();
-  iframeDoc.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8"/>
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { margin: 0; padding: 0; background: white; width: 794px; }
-      </style>
-    </head>
-    <body>${html}</body>
-    </html>
-  `);
-  iframeDoc.close();
-
-  // Wait for content to render and fonts to load
-  await new Promise((resolve) => setTimeout(resolve, 800));
-
-  const content = iframeDoc.body;
-
-  try {
-    const html2pdf = (window as any).html2pdf;
-
-    await html2pdf()
-      .set({
-        margin: 0,
-        filename: filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          letterRendering: true,
-          width: 794,
-          height: content.scrollHeight || 1123,
-          windowWidth: 794,
-          backgroundColor: '#ffffff',
-          logging: false,
-          foreignObjectRendering: false,
-        },
-        jsPDF: {
-          unit: 'px',
-          format: [794, Math.max(content.scrollHeight || 1123, 1123)],
-          orientation: 'portrait',
-          hotfixes: ['px_scaling'],
-        },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-      })
-      .from(content)
-      .save();
-  } finally {
-    document.body.removeChild(iframe);
+    setTimeout(() => {
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 1000);
+    }, 500);
   }
 }
 
