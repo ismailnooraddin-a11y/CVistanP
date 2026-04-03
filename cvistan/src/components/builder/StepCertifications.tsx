@@ -32,8 +32,8 @@ export default function StepCertifications() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label={t('certification_name', lang)} required value={cert.name} onChange={(e) => updateCertification(cert.id, { name: e.target.value })} />
-            <Input label={t('organization', lang)} required value={cert.organization} onChange={(e) => updateCertification(cert.id, { organization: e.target.value })} />
+            <Input label={t('certification_name', lang)} value={cert.name} onChange={(e) => updateCertification(cert.id, { name: e.target.value })} />
+            <Input label={t('organization', lang)} value={cert.organization} onChange={(e) => updateCertification(cert.id, { organization: e.target.value })} />
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
