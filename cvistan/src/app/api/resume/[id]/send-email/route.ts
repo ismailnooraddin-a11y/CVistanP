@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
         {
           filename: `${fullName} - Cover Letter.docx`,
           content: coverLetterBuffer.toString('base64'),
-          contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          content_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         },
       ],
     });
