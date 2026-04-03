@@ -35,7 +35,7 @@ export default function HomePage() {
       </nav>
 
       {/* Hero */}
-      <main className="max-w-7xl mx-auto px-6 pt-16 pb-24 sm:pt-24">
+      <main className="max-w-7xl mx-auto px-6 pt-8 pb-16 sm:pt-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -46,11 +46,11 @@ export default function HomePage() {
             Build a CV that <br className="hidden sm:block" />
             <span className="text-brand-600">stands out</span>
           </h1>
-          <p className="mt-6 text-lg sm:text-xl text-surface-500 max-w-xl mx-auto leading-relaxed">
+          <p className="mt-3 text-lg sm:text-xl text-surface-500 max-w-xl mx-auto leading-relaxed">
             Professional templates, live preview, instant PDF export. No sign-up needed — start building right now.
           </p>
 
-          <div className="mt-10">
+          <div className="mt-6">
             {!showLangPicker ? (
               <motion.button
                 whileHover={{ scale: 1.03 }}
