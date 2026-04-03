@@ -32,7 +32,6 @@ export default function StepPersonalInfo() {
         />
         <Input
           label={t('job_title', lang)}
-          required
           value={pi.jobTitle}
           onChange={(e) => updatePersonalInfo({ jobTitle: e.target.value })}
           placeholder="Software Engineer"
@@ -59,7 +58,6 @@ export default function StepPersonalInfo() {
 
       <Input
         label={t('location_field', lang)}
-        required
         value={pi.location}
         onChange={(e) => updatePersonalInfo({ location: e.target.value })}
         placeholder="Gullan Street, Erbil, Kurdistan"
