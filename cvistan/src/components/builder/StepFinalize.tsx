@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useBuilderStore } from '@/store/builder';
 import { Input, Button } from '@/components/ui/FormElements';
 import { t } from '@/i18n/translations';
@@ -30,9 +30,38 @@ export default function StepFinalize() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
-  const [telegramConnected, setTelegramConnected] = useState(false);
+  const [telegramPhone, setTelegramPhone] = useState(pi.phone || '');
+  const [telegramStep, setTelegramStep] = useState<'start' | 'waiting' | 'ready' | 'sent'>('start');
   const [sendingTelegram, setSendingTelegram] = useState(false);
-  const [telegramSent, setTelegramSent] = useState(false);
+  const [telegramError, setTelegramError] = useState('');
+
+  const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'CvistanBot';
+
+  // Poll for Telegram connection after user clicks "Open Telegram Bot"
+  useEffect(() => {
+    if (telegramStep !== 'waiting') return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/telegram/check?phone=${encodeURIComponent(telegramPhone)}`);
+        const data = await res.json();
+        if (data.connected) {
+          setTelegramStep('ready');
+          clearInterval(interval);
+        }
+      } catch {}
+    }, 3000);
+
+    // Stop polling after 2 minutes
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+    }, 120000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [telegramStep, telegramPhone]);
 
   const handleDownloadPdf = async () => {
     setDownloadingPdf(true);
@@ -104,10 +133,35 @@ export default function StepFinalize() {
     }
   };
 
-  const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'CvistanBot';
+  const handleOpenTelegram = () => {
+    setTelegramStep('waiting');
+    window.open(`https://t.me/${botUsername}?start=cv`, '_blank');
+  };
+
+  const handleSendTelegram = async () => {
+    setSendingTelegram(true);
+    setTelegramError('');
+    try {
+      const res = await fetch('/api/resume/local/send-telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resume, language: lang, phone: telegramPhone }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed');
+      }
+      setTelegramStep('sent');
+    } catch (err: any) {
+      setTelegramError(err.message || (lang === 'ar' ? 'فشل الإرسال' : 'Failed to send'));
+    } finally {
+      setSendingTelegram(false);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* ─── Download Section ─── */}
       <div className="bg-white rounded-xl border border-surface-200 p-6">
         <h3 className="font-semibold text-surface-800 mb-2 flex items-center gap-2">
           <Download className="w-5 h-5 text-brand-600" />
@@ -135,6 +189,7 @@ export default function StepFinalize() {
         {error && <div className="mt-3 flex items-center gap-2 text-red-500 text-sm"><AlertCircle className="w-4 h-4 flex-shrink-0" />{error}</div>}
       </div>
 
+      {/* ─── Email Section ─── */}
       <div className="bg-white rounded-xl border border-surface-200 p-6">
         <h3 className="font-semibold text-surface-800 mb-4 flex items-center gap-2">
           <Mail className="w-5 h-5 text-brand-600" />
@@ -150,29 +205,98 @@ export default function StepFinalize() {
         )}
       </div>
 
+      {/* ─── Telegram Section ─── */}
       <div className="bg-white rounded-xl border border-surface-200 p-6">
         <h3 className="font-semibold text-surface-800 mb-4 flex items-center gap-2">
           <Send className="w-5 h-5 text-brand-600" />
           {t('send_to_telegram', lang)}
         </h3>
-        <p className="text-sm text-surface-500 mb-4">{t('telegram_instructions', lang)}</p>
-        <ol className="text-sm text-surface-600 space-y-2 mb-4">
-          <li>{t('telegram_step_1', lang)}</li>
-          <li>{t('telegram_step_2', lang)}</li>
-          <li>{t('telegram_step_3', lang)}</li>
-        </ol>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <a href={`https://t.me/${botUsername}?start=cv`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-[#0088cc] text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-[#006daa] transition-colors">
-            <ExternalLink className="w-4 h-4" />{t('open_telegram_bot', lang)}
-          </a>
-          {telegramSent ? (
-            <div className="flex items-center gap-2 text-green-600 text-sm"><CheckCircle className="w-4 h-4" />{t('success', lang)}</div>
-          ) : (
-            <Button variant="secondary" disabled={!telegramConnected} loading={sendingTelegram}><Send className="w-4 h-4" />{t('send_to_telegram', lang)}</Button>
-          )}
-        </div>
+
+        {telegramStep === 'sent' ? (
+          <div className="flex items-center gap-2 text-green-600">
+            <CheckCircle className="w-5 h-5" />
+            {lang === 'ar' ? 'تم إرسال الملفات إلى تيليغرام!' : 'Files sent to Telegram!'}
+          </div>
+        ) : (
+          <>
+            {/* Phone number input */}
+            <div className="mb-4">
+              <Input
+                type="tel"
+                value={telegramPhone}
+                onChange={(e) => setTelegramPhone(e.target.value)}
+                label={lang === 'ar' ? 'رقم الهاتف (المرتبط بتيليغرام)' : 'Phone Number (linked to Telegram)'}
+                placeholder={lang === 'ar' ? 'رقم هاتفك على تيليغرام' : 'Your Telegram phone number'}
+              />
+            </div>
+
+            {/* Step-by-step instructions */}
+            <div className="bg-surface-50 rounded-lg p-4 mb-4">
+              <p className="text-sm font-medium text-surface-700 mb-3">
+                {lang === 'ar' ? 'الخطوات:' : 'Steps:'}
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-start gap-3">
+                  <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${telegramStep === 'start' ? 'bg-brand-600 text-white' : 'bg-green-100 text-green-700'}`}>
+                    {telegramStep === 'start' ? '1' : '✓'}
+                  </span>
+                  <p className="text-sm text-surface-600">
+                    {lang === 'ar' ? 'اضغط الزر أدناه لفتح بوت تيليغرام واضغط Start' : 'Click the button below to open the Telegram bot and press Start'}
+                  </p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${telegramStep === 'ready' || telegramStep === 'sent' ? 'bg-green-100 text-green-700' : telegramStep === 'waiting' ? 'bg-brand-600 text-white animate-pulse' : 'bg-surface-200 text-surface-500'}`}>
+                    {telegramStep === 'ready' || telegramStep === 'sent' ? '✓' : '2'}
+                  </span>
+                  <p className="text-sm text-surface-600">
+                    {telegramStep === 'waiting'
+                      ? (lang === 'ar' ? 'بانتظار الاتصال... اضغط Start في تيليغرام' : 'Waiting for connection... press Start in Telegram')
+                      : telegramStep === 'ready'
+                      ? (lang === 'ar' ? 'متصل! اضغط إرسال أدناه' : 'Connected! Click Send below')
+                      : (lang === 'ar' ? 'عد إلى هنا واضغط "إرسال إلى تيليغرام"' : 'Come back here and click "Send to Telegram"')}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              {telegramStep === 'start' || telegramStep === 'waiting' ? (
+                <button
+                  onClick={handleOpenTelegram}
+                  className="inline-flex items-center justify-center gap-2 bg-[#0088cc] text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-[#006daa] transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  {telegramStep === 'waiting'
+                    ? (lang === 'ar' ? 'فتح مرة أخرى' : 'Open Again')
+                    : (lang === 'ar' ? 'فتح بوت تيليغرام' : 'Open Telegram Bot')}
+                </button>
+              ) : null}
+
+              {telegramStep === 'ready' && (
+                <Button onClick={handleSendTelegram} variant="primary" size="lg" loading={sendingTelegram}>
+                  <Send className="w-4 h-4" />
+                  {lang === 'ar' ? 'إرسال إلى تيليغرام' : 'Send to Telegram'}
+                </Button>
+              )}
+
+              {/* Manual override — skip waiting */}
+              {telegramStep === 'waiting' && (
+                <Button variant="ghost" size="sm" onClick={() => setTelegramStep('ready')}>
+                  {lang === 'ar' ? 'ضغطت Start بالفعل' : 'I already pressed Start'}
+                </Button>
+              )}
+            </div>
+
+            {telegramError && (
+              <div className="mt-3 flex items-center gap-2 text-red-500 text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />{telegramError}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
+      {/* ─── Save Prompt ─── */}
       <div className="bg-brand-50 rounded-xl border border-brand-100 p-6">
         <h3 className="font-semibold text-surface-800 mb-2 flex items-center gap-2">
           <UserPlus className="w-5 h-5 text-brand-600" />
