@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 async function sendTelegramDocument(botToken: string, chatId: string, buffer: Buffer, filename: string, caption: string) {
   const formData = new FormData();
   formData.append('chat_id', chatId);
-  formData.append('document', new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), filename);
+formData.append('document', new Blob([new Uint8Array(buffer)], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), filename);
   formData.append('caption', caption);
 
   const res = await fetch(`https://api.telegram.org/bot${botToken}/sendDocument`, {
