@@ -91,7 +91,7 @@ export default function HomePage() {
           </div>
 
           <div className="mt-5">
-            <a href="/learn" className="inline-flex items-center gap-2 text-sm text-surface-400 hover:text-brand-600 transition-colors font-medium">
+            <a href="/learn" className="inline-flex items-center gap-2 text-base text-brand-600 hover:text-brand-700 transition-colors font-semibold underline underline-offset-4 decoration-brand-200 hover:decoration-brand-400">
               New to CVs? Learn what makes a great CV
               <ChevronRight className="w-3.5 h-3.5" />
             </a>
