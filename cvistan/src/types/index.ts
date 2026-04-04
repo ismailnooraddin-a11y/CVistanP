@@ -63,6 +63,21 @@ export interface LanguageEntry {
   sortOrder: number;
 }
 
+export interface VolunteerEntry {
+  id: string;
+  title: string;
+  organization: string;
+  category: 'volunteer' | 'club' | 'competition' | 'student-org' | 'community' | 'other';
+  location?: string;
+  startMonth?: number | null;
+  startYear?: number | null;
+  endMonth?: number | null;
+  endYear?: number | null;
+  isCurrent: boolean;
+  description: string;
+  sortOrder: number;
+}
+
 export interface CertificationEntry {
   id: string;
   name: string;
@@ -115,6 +130,7 @@ export interface ResumeData {
   education: EducationEntry[];
   skills: SkillEntry[];
   languages: LanguageEntry[];
+  volunteer: VolunteerEntry[];
   certifications: CertificationEntry[];
 }
 
@@ -127,6 +143,7 @@ export type BuilderStep =
   | 'education'
   | 'skills'
   | 'languages'
+  | 'volunteer'
   | 'certifications'
   | 'template'
   | 'finalize';
@@ -138,9 +155,10 @@ export const BUILDER_STEPS: { key: BuilderStep; titleEn: string; titleAr: string
   { key: 'education', titleEn: 'Education', titleAr: 'التعليم', number: 4 },
   { key: 'skills', titleEn: 'Skills', titleAr: 'المهارات', number: 5 },
   { key: 'languages', titleEn: 'Languages', titleAr: 'اللغات', number: 6 },
-  { key: 'certifications', titleEn: 'Certifications', titleAr: 'الشهادات', number: 7 },
-  { key: 'template', titleEn: 'Template', titleAr: 'القالب', number: 8 },
-  { key: 'finalize', titleEn: 'Finalize', titleAr: 'المراجعة النهائية', number: 9 },
+  { key: 'volunteer', titleEn: 'Volunteer & Activities', titleAr: 'التطوع والأنشطة', number: 7 },
+  { key: 'certifications', titleEn: 'Certifications', titleAr: 'الشهادات', number: 8 },
+  { key: 'template', titleEn: 'Template', titleAr: 'القالب', number: 9 },
+  { key: 'finalize', titleEn: 'Finalize', titleAr: 'المراجعة النهائية', number: 10 },
 ];
 
 // ─── Delivery ───
