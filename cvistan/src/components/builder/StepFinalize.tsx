@@ -245,8 +245,8 @@ export default function StepFinalize() {
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${telegramStep === 'ready' || telegramStep === 'sent' ? 'bg-green-100 text-green-700' : telegramStep === 'waiting' ? 'bg-brand-600 text-white animate-pulse' : 'bg-surface-200 text-surface-500'}`}>
-                    {telegramStep === 'ready' || telegramStep === 'sent' ? '✓' : '2'}
+                  <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${telegramStep === 'ready' ? 'bg-green-100 text-green-700' : telegramStep === 'waiting' ? 'bg-brand-600 text-white animate-pulse' : 'bg-surface-200 text-surface-500'}`}>
+                    {telegramStep === 'ready' ? '✓' : '2'}
                   </span>
                   <p className="text-sm text-surface-600">
                     {telegramStep === 'waiting'
