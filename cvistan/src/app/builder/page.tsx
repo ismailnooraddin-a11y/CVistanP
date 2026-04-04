@@ -13,13 +13,14 @@ import StepExperience from '@/components/builder/StepExperience';
 import StepEducation from '@/components/builder/StepEducation';
 import StepSkills from '@/components/builder/StepSkills';
 import StepLanguages from '@/components/builder/StepLanguages';
+import StepVolunteer from '@/components/builder/StepVolunteer';
 import StepCertifications from '@/components/builder/StepCertifications';
 import StepTemplate from '@/components/builder/StepTemplate';
 import StepFinalize from '@/components/builder/StepFinalize';
 import {
   FileText, ChevronLeft, ChevronRight, Eye, EyeOff,
   User, AlignLeft, Briefcase, GraduationCap, Wrench,
-  Globe2, Award, Palette, CheckCircle,
+  Globe2, Heart, Award, Palette, CheckCircle,
 } from 'lucide-react';
 
 const stepComponents: Record<BuilderStep, React.ComponentType> = {
@@ -29,6 +30,7 @@ const stepComponents: Record<BuilderStep, React.ComponentType> = {
   'education': StepEducation,
   'skills': StepSkills,
   'languages': StepLanguages,
+  'volunteer': StepVolunteer,
   'certifications': StepCertifications,
   'template': StepTemplate,
   'finalize': StepFinalize,
@@ -41,11 +43,11 @@ const stepIcons: Record<BuilderStep, React.ComponentType<{ className?: string }>
   'education': GraduationCap,
   'skills': Wrench,
   'languages': Globe2,
+  'volunteer': Heart,
   'certifications': Award,
   'template': Palette,
   'finalize': CheckCircle,
 };
-
 export default function BuilderPage() {
   const { language, currentStep, setCurrentStep } = useBuilderStore();
   const lang = language;
