@@ -18,10 +18,10 @@ export async function POST(req: NextRequest) {
       .limit(1);
 
     if (!connections || connections.length === 0) {
-      return NextResponse.json({ 
-        error: language === 'ar' 
-          ? 'لم يتم العثور على اتصال تيليغرام. اضغط Start في البوت أولاً.' 
-          : 'No Telegram connection found. Please press Start in the bot first.' 
+      return NextResponse.json({
+        error: language === 'ar'
+          ? 'لم يتم العثور على اتصال تيليغرام. اضغط Start في البوت أولاً.'
+          : 'No Telegram connection found. Please press Start in the bot first.'
       }, { status: 400 });
     }
 
@@ -38,12 +38,17 @@ export async function POST(req: NextRequest) {
         chat_id: chatId,
         parse_mode: 'HTML',
         text: isAr
-          ? `✨ <b>مرحباً ${fullName}!</b>\n\n🎯 حزمة التقديم الوظيفي الخاصة بك جاهزة.\n\nستتلقى الملفات التالية:\n\n📝 <b>رسالة التغطية</b> — قالب احترافي مع بياناتك\n❓ <b>أسئلة المقابلة</b> — أهم الأسئلة مع نماذج إجابات\n\nجاري الإرسال...`
-          : `✨ <b>Hi ${fullName}!</b>\n\n🎯 Your <b>Job Application Package</b> is ready!\n\nYou will receive:\n\n📝 <b>Cover Letter</b> — Professional template with your details\n❓ <b>Interview Prep</b> — Top questions with sample answers\n\nSending your files now...`,
+          ? `✨ <b>مرحباً ${fullName}!</b>\n\n🎯 حزمة التقديم الوظيفي الخاصة بك جاهزة.\n\nستتلقى الملفات التالية:\n\n📄 <b>السيرة الذاتية</b> — ملف Word جاهز للتعديل والطباعة\n📝 <b>رسالة التغطية</b> — قالب احترافي مع بياناتك\n❓ <b>أسئلة المقابلة</b> — أهم ١٥ سؤال مع نماذج إجابات\n\nجاري الإرسال...`
+          : `✨ <b>Hi ${fullName}!</b>\n\n🎯 Your <b>Job Application Package</b> is ready!\n\nYou will receive:\n\n📄 <b>Your CV</b> — Word file ready to edit and print\n📝 <b>Cover Letter</b> — Professional template with your details\n❓ <b>Interview Prep</b> — Top 15 questions with sample answers\n\nSending your files now...`,
       }),
     });
 
     const { Document, Paragraph, TextRun, AlignmentType, Packer, BorderStyle } = await import('docx');
+
+    // --- CV DOCX ---
+    const cvDoc = await buildCvDocx(resume, language, { Document, Paragraph, TextRun, AlignmentType, Packer, BorderStyle });
+    const cvBuffer = Buffer.from(await Packer.toBuffer(cvDoc));
+    await sendTelegramDocument(botToken, chatId, cvBuffer, `${fullName} - CV.docx`, isAr ? '📄 السيرة الذاتية' : '📄 Your CV');
 
     // --- Cover Letter ---
     const coverDoc = await buildCoverLetter(resume, language, { Document, Paragraph, TextRun, AlignmentType, Packer, BorderStyle });
@@ -63,8 +68,8 @@ export async function POST(req: NextRequest) {
         chat_id: chatId,
         parse_mode: 'HTML',
         text: isAr
-          ? `✅ <b>تم إرسال جميع ملفاتك بنجاح!</b>\n\n💡 <b>قبل أن تبدأ:</b>\n• استبدل <b>XXXXX</b> في رسالة التغطية بالمسمى الوظيفي المستهدف\n• عدّل النصوص بين <b>[ ]</b> في أسئلة المقابلة بإجاباتك الشخصية\n• تدرّب على إجاباتك بصوت عالٍ قبل المقابلة\n\n🌟 <b>نتمنى لك كل التوفيق في رحلتك المهنية!</b>\n\n— فريق <b>Cvistan</b> 💼`
-          : `✅ <b>All your files have been sent successfully!</b>\n\n💡 <b>Before you start:</b>\n• Replace <b>XXXXX</b> in the cover letter with the job title you're applying for\n• Fill in the <b>[ ]</b> brackets in the interview prep with your own answers\n• Practice your answers out loud before the interview\n\n🌟 <b>Wishing you the very best on your career journey!</b>\n\n— The <b>Cvistan</b> Team 💼`,
+          ? `✅ <b>تم إرسال جميع ملفاتك بنجاح!</b>\n\n📎 <b>الملفات المرسلة:</b>\n• السيرة الذاتية (Word)\n• رسالة التغطية (Word)\n• أسئلة المقابلة (Word)\n\n💡 <b>قبل أن تبدأ:</b>\n• استبدل <b>XXXXX</b> في رسالة التغطية بالمسمى الوظيفي المستهدف\n• عدّل النصوص بين <b>[ ]</b> في أسئلة المقابلة بإجاباتك الشخصية\n• يمكنك تحويل ملف الـ Word إلى PDF من هاتفك أو الكمبيوتر\n• تدرّب على إجاباتك بصوت عالٍ قبل المقابلة\n\n🌟 <b>نتمنى لك كل التوفيق في رحلتك المهنية!</b>\n\n— فريق <b>Cvistan</b> 💼`
+          : `✅ <b>All your files have been sent successfully!</b>\n\n📎 <b>Files sent:</b>\n• Your CV (Word)\n• Cover Letter (Word)\n• Interview FAQ (Word)\n\n💡 <b>Before you start:</b>\n• Replace <b>XXXXX</b> in the cover letter with the job title you're applying for\n• Fill in the <b>[ ]</b> brackets in the interview prep with your own answers\n• You can convert the Word CV to PDF from your phone or computer\n• Practice your answers out loud before the interview\n\n🌟 <b>Wishing you the very best on your career journey!</b>\n\n— The <b>Cvistan</b> Team 💼`,
       }),
     });
 
@@ -90,6 +95,195 @@ async function sendTelegramDocument(botToken: string, chatId: string, buffer: Bu
   if (!data.ok) throw new Error(`Telegram: ${data.description}`);
 }
 
+// ══════════════════════════════════════════
+// CV DOCX GENERATOR
+// ══════════════════════════════════════════
+async function buildCvDocx(data: any, language: string, docx: any): Promise<any> {
+  const pi = data.personalInfo || {};
+  const isAr = language === 'ar';
+  const font = 'Arial';
+  const align = isAr ? docx.AlignmentType.RIGHT : docx.AlignmentType.LEFT;
+  const children: any[] = [];
+
+  // Header
+  children.push(new docx.Paragraph({
+    alignment: isAr ? docx.AlignmentType.RIGHT : docx.AlignmentType.CENTER,
+    spacing: { after: 40 },
+    children: [new docx.TextRun({ text: pi.fullName || '', bold: true, size: 32, font })],
+  }));
+  children.push(new docx.Paragraph({
+    alignment: isAr ? docx.AlignmentType.RIGHT : docx.AlignmentType.CENTER,
+    spacing: { after: 40 },
+    children: [new docx.TextRun({ text: pi.jobTitle || '', size: 24, color: '444444', font })],
+  }));
+
+  const contact = [pi.email, pi.phone, pi.location].filter(Boolean).join('  |  ');
+  if (contact) {
+    children.push(new docx.Paragraph({
+      alignment: isAr ? docx.AlignmentType.RIGHT : docx.AlignmentType.CENTER,
+      spacing: { after: 80 },
+      children: [new docx.TextRun({ text: contact, size: 20, color: '666666', font })],
+    }));
+  }
+
+  children.push(new docx.Paragraph({
+    border: { bottom: { style: docx.BorderStyle.SINGLE, size: 4, color: '0c8eeb' } },
+    spacing: { after: 200 },
+    children: [],
+  }));
+
+  // Summary
+  if (pi.summary) {
+    children.push(cvSectionTitle(isAr ? 'الملخص المهني' : 'Professional Summary', font, docx));
+    children.push(new docx.Paragraph({
+      alignment: align, spacing: { after: 160, line: 320 },
+      children: [new docx.TextRun({ text: pi.summary, size: 22, font })],
+    }));
+  }
+
+  // Experience
+  const experience = data.experience || [];
+  if (experience.length > 0) {
+    children.push(cvSectionTitle(isAr ? 'الخبرة' : 'Experience', font, docx));
+    for (const exp of experience) {
+      children.push(new docx.Paragraph({
+        alignment: align, spacing: { after: 40 },
+        children: [
+          new docx.TextRun({ text: `${exp.jobTitle || ''} — ${exp.company || ''}`, bold: true, size: 22, font }),
+          new docx.TextRun({ text: exp.location ? `, ${exp.location}` : '', size: 22, color: '666666', font }),
+        ],
+      }));
+      const startDate = fmtDate(exp.startMonth, exp.startYear);
+      const endDate = exp.isCurrent ? (isAr ? 'حالياً' : 'Present') : fmtDate(exp.endMonth, exp.endYear);
+      if (startDate || endDate) {
+        children.push(new docx.Paragraph({
+          alignment: align, spacing: { after: 80 },
+          children: [new docx.TextRun({ text: `${startDate} — ${endDate}`, size: 20, color: '888888', font })],
+        }));
+      }
+      const bullets = (exp.bullets || []).filter((b: any) => b.text);
+      for (const bullet of bullets) {
+        children.push(new docx.Paragraph({
+          alignment: align, spacing: { after: 40 }, indent: { left: 400 },
+          children: [new docx.TextRun({ text: `•  ${bullet.text}`, size: 21, font })],
+        }));
+      }
+      children.push(new docx.Paragraph({ spacing: { after: 120 }, children: [] }));
+    }
+  }
+
+  // Education
+  const education = data.education || [];
+  if (education.length > 0) {
+    children.push(cvSectionTitle(isAr ? 'التعليم' : 'Education', font, docx));
+    for (const edu of education) {
+      children.push(new docx.Paragraph({
+        alignment: align, spacing: { after: 40 },
+        children: [new docx.TextRun({ text: `${edu.degree || ''} — ${edu.institution || ''}`, bold: true, size: 22, font })],
+      }));
+      const gradDate = fmtDate(edu.graduationMonth, edu.graduationYear);
+      if (gradDate) {
+        children.push(new docx.Paragraph({
+          alignment: align, spacing: { after: 40 },
+          children: [new docx.TextRun({ text: gradDate, size: 20, color: '888888', font })],
+        }));
+      }
+      if (edu.gpa) {
+        children.push(new docx.Paragraph({
+          alignment: align, spacing: { after: 40 },
+          children: [new docx.TextRun({ text: `${isAr ? 'المعدل' : 'GPA'}: ${edu.gpa}`, size: 20, color: '666666', font })],
+        }));
+      }
+      children.push(new docx.Paragraph({ spacing: { after: 100 }, children: [] }));
+    }
+  }
+
+  // Skills
+  const skills = data.skills || [];
+  if (skills.length > 0) {
+    children.push(cvSectionTitle(isAr ? 'المهارات' : 'Skills', font, docx));
+    children.push(new docx.Paragraph({
+      alignment: align, spacing: { after: 160 },
+      children: [new docx.TextRun({ text: skills.map((s: any) => s.name).join('  •  '), size: 22, font })],
+    }));
+  }
+
+  // Languages
+  const languages = data.languages || [];
+  if (languages.length > 0) {
+    const profLabels: Record<string, string> = isAr
+      ? { beginner: 'مبتدئ', intermediate: 'متوسط', fluent: 'متقدم', native: 'لغة أم' }
+      : { beginner: 'Beginner', intermediate: 'Intermediate', fluent: 'Fluent', native: 'Native' };
+    children.push(cvSectionTitle(isAr ? 'اللغات' : 'Languages', font, docx));
+    children.push(new docx.Paragraph({
+      alignment: align, spacing: { after: 160 },
+      children: [new docx.TextRun({
+        text: languages.map((l: any) => `${l.name} (${profLabels[l.proficiency] || l.proficiency})`).join('  •  '),
+        size: 22, font,
+      })],
+    }));
+  }
+
+  // Volunteer
+  const volunteer = data.volunteer || [];
+  if (volunteer.length > 0) {
+    children.push(cvSectionTitle(isAr ? 'التطوع والأنشطة' : 'Volunteer & Activities', font, docx));
+    for (const vol of volunteer) {
+      children.push(new docx.Paragraph({
+        alignment: align, spacing: { after: 40 },
+        children: [
+          new docx.TextRun({ text: `${vol.title || ''} — ${vol.organization || ''}`, bold: true, size: 22, font }),
+        ],
+      }));
+      const volStart = fmtDate(vol.startMonth, vol.startYear);
+      const volEnd = vol.isCurrent ? (isAr ? 'حالياً' : 'Present') : fmtDate(vol.endMonth, vol.endYear);
+      if (volStart || volEnd) {
+        children.push(new docx.Paragraph({
+          alignment: align, spacing: { after: 40 },
+          children: [new docx.TextRun({ text: `${volStart} — ${volEnd}`, size: 20, color: '888888', font })],
+        }));
+      }
+      if (vol.description) {
+        children.push(new docx.Paragraph({
+          alignment: align, spacing: { after: 80, line: 320 }, indent: { left: 200 },
+          children: [new docx.TextRun({ text: vol.description, size: 21, font })],
+        }));
+      }
+      children.push(new docx.Paragraph({ spacing: { after: 100 }, children: [] }));
+    }
+  }
+
+  // Certifications
+  const certs = data.certifications || [];
+  if (certs.length > 0) {
+    children.push(cvSectionTitle(isAr ? 'الشهادات' : 'Certifications', font, docx));
+    for (const cert of certs) {
+      children.push(new docx.Paragraph({
+        alignment: align, spacing: { after: 40 },
+        children: [new docx.TextRun({ text: `${cert.name} — ${cert.organization}`, bold: true, size: 22, font })],
+      }));
+      const issueDate = fmtDate(cert.issueMonth, cert.issueYear);
+      if (issueDate) {
+        children.push(new docx.Paragraph({
+          alignment: align, spacing: { after: 80 },
+          children: [new docx.TextRun({ text: issueDate, size: 20, color: '888888', font })],
+        }));
+      }
+    }
+  }
+
+  return new docx.Document({
+    styles: { default: { document: { run: { font, size: 22 } } } },
+    sections: [{
+      properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1200, right: 1200, bottom: 1200, left: 1200 } } },
+      children,
+    }],
+  });
+}
+
+// ══════════════════════════════════════════
+// COVER LETTER GENERATOR
+// ══════════════════════════════════════════
 async function buildCoverLetter(resume: any, language: string, docx: any): Promise<any> {
   const pi = resume.personalInfo || {};
   const isAr = language === 'ar';
@@ -127,75 +321,66 @@ async function buildCoverLetter(resume: any, language: string, docx: any): Promi
   });
 }
 
+// ══════════════════════════════════════════
+// FAQ GENERATOR
+// ══════════════════════════════════════════
 async function buildFaq(language: string, docx: any): Promise<any> {
   const isAr = language === 'ar';
   const font = 'Times New Roman';
   const align = isAr ? docx.AlignmentType.RIGHT : docx.AlignmentType.LEFT;
   const faqs = [
     { en: 'Tell me about yourself.', ar: 'حدثني عن نفسك.', ansEn: 'I am a [your title] with [X] years of experience in [your field]. I have worked on [key projects]. I am passionate about [interest] and looking for new challenges.', ansAr: 'أنا [المسمى الوظيفي] ولدي [عدد] سنوات من الخبرة في [مجالك]. عملت على [مشاريع رئيسية]. أنا شغوف بـ[اهتمام] وأبحث عن تحديات جديدة.' },
-    { en: 'Why do you want to work here?', ar: 'لماذا تريد العمل هنا؟', ansEn: 'I admire your company\'s [mission/products]. My skills in [area] align well with this role, and I see great opportunity for mutual growth.', ansAr: 'أعجبني [رسالة/منتجات] شركتكم. مهاراتي في [مجال] تتوافق مع هذا الدور، وأرى فرصة رائعة للنمو المتبادل.' },
-    { en: 'What are your greatest strengths?', ar: 'ما هي أبرز نقاط قوتك؟', ansEn: 'My key strengths include [strength 1], [strength 2], and [strength 3]. For example, I [brief example demonstrating the strength].', ansAr: 'أبرز نقاط قوتي تشمل [قوة ١] و[قوة ٢] و[قوة ٣]. على سبيل المثال، [مثال موجز يوضح القوة].' },
-    { en: 'What is your greatest weakness?', ar: 'ما هي أكبر نقاط ضعفك؟', ansEn: 'I tend to [honest weakness]. However, I have been actively improving by [specific strategy]. This has helped me become more efficient.', ansAr: 'أميل إلى [ضعف حقيقي]. ومع ذلك، أعمل بنشاط على تحسين ذلك من خلال [استراتيجية محددة]. وقد ساعدني ذلك على التحسن.' },
-    { en: 'Where do you see yourself in 5 years?', ar: 'أين ترى نفسك بعد ٥ سنوات؟', ansEn: 'I see myself in a [target role] where I can lead projects and mentor others. I want to deepen my expertise in [field].', ansAr: 'أرى نفسي في [دور مستهدف] حيث أقود المشاريع وأوجه الآخرين. أريد تعميق خبرتي في [المجال].' },
-    { en: 'Why did you leave your last job?', ar: 'لماذا تركت وظيفتك الأخيرة؟', ansEn: 'I am looking for new challenges and opportunities to grow professionally that better align with my long-term career goals.', ansAr: 'أبحث عن تحديات وفرص جديدة للنمو المهني تتوافق بشكل أفضل مع أهدافي المهنية طويلة المدى.' },
-    { en: 'How do you handle stress and pressure?', ar: 'كيف تتعامل مع الضغط؟', ansEn: 'I stay organized, prioritize tasks, and break projects into manageable steps. Clear communication with my team also helps prevent unnecessary stress.', ansAr: 'أبقى منظماً، وأرتب الأولويات، وأقسم المشاريع إلى خطوات يمكن إدارتها. التواصل الواضح مع فريقي يمنع التوتر غير الضروري.' },
-    { en: 'Describe a difficult work situation.', ar: 'صف موقفاً صعباً في العمل.', ansEn: 'In my previous role, [describe situation]. I approached it by [actions taken]. The result was [positive outcome]. I learned [key lesson].', ansAr: 'في وظيفتي السابقة، [صف الموقف]. تعاملت معه من خلال [الإجراءات]. وكانت النتيجة [نتيجة إيجابية]. تعلمت [الدرس المستفاد].' },
-    { en: 'What are your salary expectations?', ar: 'ما هي توقعاتك للراتب؟', ansEn: 'Based on my research and experience, I am looking for a salary in the range of [range]. I am open to discussion about the full compensation package.', ansAr: 'بناءً على بحثي وخبرتي، أتطلع إلى راتب في نطاق [النطاق]. أنا منفتح على النقاش حول حزمة التعويضات الكاملة.' },
-    { en: 'Why should we hire you?', ar: 'لماذا يجب أن نوظفك؟', ansEn: 'I bring a combination of [skill 1], [skill 2], and [skill 3] that directly match what this role requires. I am a fast learner and genuinely excited about contributing.', ansAr: 'أقدم مزيجاً من [مهارة ١] و[مهارة ٢] و[مهارة ٣] تتطابق مباشرة مع متطلبات هذا الدور. أنا سريع التعلم ومتحمس للمساهمة.' },
-    { en: 'Tell me about a time you showed leadership.', ar: 'حدثني عن موقف أظهرت فيه قيادة.', ansEn: 'When [situation], I took the initiative to [action]. I coordinated with [who] and the outcome was [positive result].', ansAr: 'عندما [الموقف]، بادرت بـ[الإجراء]. نسقت مع [من] وكانت النتيجة [نتيجة إيجابية].' },
-    { en: 'How do you work in a team?', ar: 'كيف تعمل ضمن فريق؟', ansEn: 'I believe in open communication, respecting diverse perspectives, and contributing my best work. I actively listen and offer help when needed.', ansAr: 'أؤمن بالتواصل المفتوح، واحترام وجهات النظر المتنوعة، وتقديم أفضل ما لدي. أستمع بفاعلية وأقدم المساعدة عند الحاجة.' },
-    { en: 'What do you know about our company?', ar: 'ماذا تعرف عن شركتنا؟', ansEn: 'I know that your company [mention specific facts]. I particularly admire [specific aspect] and see my skills as a great fit for your team.', ansAr: 'أعلم أن شركتكم [حقائق محددة]. أعجبني بشكل خاص [جانب محدد] وأرى أن مهاراتي مناسبة جداً لفريقكم.' },
-    { en: 'Do you have any questions for us?', ar: 'هل لديك أي أسئلة لنا؟', ansEn: 'Yes! What does a typical day look like in this role? What are the biggest challenges the team faces? What growth opportunities does the company offer?', ansAr: 'نعم! كيف يبدو اليوم العادي في هذا الدور؟ ما أكبر تحديات الفريق حالياً؟ ما فرص التطوير المهني المتاحة؟' },
-    { en: 'How do you handle feedback or criticism?', ar: 'كيف تتعامل مع النقد والملاحظات؟', ansEn: 'I view constructive feedback as an opportunity to grow. I listen carefully, ask clarifying questions if needed, and take actionable steps to improve.', ansAr: 'أنظر إلى الملاحظات البناءة كفرصة للنمو. أستمع بعناية، وأطرح أسئلة توضيحية إذا لزم الأمر، وأتخذ خطوات عملية للتحسين.' },
+    { en: 'Why do you want to work here?', ar: 'لماذا تريد العمل هنا؟', ansEn: 'I admire your company\'s [mission/products]. My skills in [area] align well with this role.', ansAr: 'أعجبني [رسالة/منتجات] شركتكم. مهاراتي في [مجال] تتوافق مع هذا الدور.' },
+    { en: 'What are your greatest strengths?', ar: 'ما هي أبرز نقاط قوتك؟', ansEn: 'My key strengths include [strength 1], [strength 2], and [strength 3].', ansAr: 'أبرز نقاط قوتي تشمل [قوة ١] و[قوة ٢] و[قوة ٣].' },
+    { en: 'What is your greatest weakness?', ar: 'ما هي أكبر نقاط ضعفك؟', ansEn: 'I tend to [honest weakness]. However, I have been improving by [strategy].', ansAr: 'أميل إلى [ضعف حقيقي]. ومع ذلك، أعمل على تحسين ذلك من خلال [استراتيجية].' },
+    { en: 'Where do you see yourself in 5 years?', ar: 'أين ترى نفسك بعد ٥ سنوات؟', ansEn: 'I see myself in a [target role] where I can lead projects and mentor others.', ansAr: 'أرى نفسي في [دور مستهدف] حيث أقود المشاريع وأوجه الآخرين.' },
+    { en: 'Why did you leave your last job?', ar: 'لماذا تركت وظيفتك الأخيرة؟', ansEn: 'I am looking for new challenges that better align with my long-term career goals.', ansAr: 'أبحث عن تحديات جديدة تتوافق مع أهدافي المهنية طويلة المدى.' },
+    { en: 'How do you handle stress?', ar: 'كيف تتعامل مع الضغط؟', ansEn: 'I stay organized, prioritize tasks, and break projects into manageable steps.', ansAr: 'أبقى منظماً، وأرتب الأولويات، وأقسم المشاريع إلى خطوات يمكن إدارتها.' },
+    { en: 'Describe a difficult work situation.', ar: 'صف موقفاً صعباً في العمل.', ansEn: 'In my previous role, [situation]. I approached it by [actions]. The result was [outcome].', ansAr: 'في وظيفتي السابقة، [الموقف]. تعاملت معه من خلال [الإجراءات]. وكانت النتيجة [النتيجة].' },
+    { en: 'What are your salary expectations?', ar: 'ما هي توقعاتك للراتب؟', ansEn: 'Based on my experience, I am looking for [range]. I am open to discussion.', ansAr: 'بناءً على خبرتي، أتطلع إلى [نطاق]. أنا منفتح على النقاش.' },
+    { en: 'Why should we hire you?', ar: 'لماذا يجب أن نوظفك؟', ansEn: 'I bring [skill 1], [skill 2], and [skill 3] that directly match this role.', ansAr: 'أقدم [مهارة ١] و[مهارة ٢] و[مهارة ٣] تتطابق مع هذا الدور.' },
+    { en: 'Tell me about a time you showed leadership.', ar: 'حدثني عن موقف أظهرت فيه قيادة.', ansEn: 'When [situation], I took initiative to [action]. The outcome was [result].', ansAr: 'عندما [الموقف]، بادرت بـ[الإجراء]. كانت النتيجة [النتيجة].' },
+    { en: 'How do you work in a team?', ar: 'كيف تعمل ضمن فريق؟', ansEn: 'I believe in open communication, respecting diverse perspectives, and contributing my best.', ansAr: 'أؤمن بالتواصل المفتوح واحترام وجهات النظر المتنوعة وتقديم أفضل ما لدي.' },
+    { en: 'What do you know about our company?', ar: 'ماذا تعرف عن شركتنا؟', ansEn: 'I know that your company [facts]. I admire [aspect] and see my skills as a great fit.', ansAr: 'أعلم أن شركتكم [حقائق]. أعجبني [جانب] وأرى أن مهاراتي مناسبة.' },
+    { en: 'Do you have any questions for us?', ar: 'هل لديك أي أسئلة لنا؟', ansEn: 'Yes! What does a typical day look like? What are the biggest team challenges?', ansAr: 'نعم! كيف يبدو اليوم العادي؟ ما أكبر تحديات الفريق؟' },
+    { en: 'How do you handle feedback?', ar: 'كيف تتعامل مع الملاحظات؟', ansEn: 'I view feedback as an opportunity to grow. I listen carefully and take steps to improve.', ansAr: 'أنظر إلى الملاحظات كفرصة للنمو. أستمع بعناية وأتخذ خطوات للتحسين.' },
   ];
 
   const children: any[] = [];
-
-  children.push(new docx.Paragraph({
-    alignment: isAr ? docx.AlignmentType.RIGHT : docx.AlignmentType.CENTER,
-    spacing: { after: 100 },
-    children: [new docx.TextRun({ text: isAr ? 'أهم ١٥ سؤالاً في مقابلات العمل' : '15 Most Asked Interview Questions', bold: true, size: 36, font })],
-  }));
-  children.push(new docx.Paragraph({
-    alignment: isAr ? docx.AlignmentType.RIGHT : docx.AlignmentType.CENTER,
-    spacing: { after: 80 },
-    children: [new docx.TextRun({ text: isAr ? 'مع نماذج إجابات جاهزة للتخصيص' : 'With Template Answers Ready to Customize', size: 24, color: '666666', font })],
-  }));
+  children.push(new docx.Paragraph({ alignment: isAr ? docx.AlignmentType.RIGHT : docx.AlignmentType.CENTER, spacing: { after: 100 }, children: [new docx.TextRun({ text: isAr ? 'أهم ١٥ سؤالاً في مقابلات العمل' : '15 Most Asked Interview Questions', bold: true, size: 36, font })] }));
+  children.push(new docx.Paragraph({ alignment: isAr ? docx.AlignmentType.RIGHT : docx.AlignmentType.CENTER, spacing: { after: 80 }, children: [new docx.TextRun({ text: isAr ? 'مع نماذج إجابات جاهزة للتخصيص' : 'With Template Answers Ready to Customize', size: 24, color: '666666', font })] }));
   children.push(new docx.Paragraph({ border: { bottom: { style: docx.BorderStyle.SINGLE, size: 4, color: '333333' } }, spacing: { after: 200 }, children: [] }));
-  children.push(new docx.Paragraph({
-    alignment: align, spacing: { after: 200 },
-    children: [new docx.TextRun({ text: isAr ? 'تعليمات: استبدل النصوص بين الأقواس [ ] بمعلوماتك الشخصية وخبراتك.' : 'Instructions: Replace text in square brackets [ ] with your own personal information and experience.', size: 22, italics: true, color: '666666', font })],
-  }));
+  children.push(new docx.Paragraph({ alignment: align, spacing: { after: 200 }, children: [new docx.TextRun({ text: isAr ? 'تعليمات: استبدل النصوص بين [ ] بمعلوماتك.' : 'Instructions: Replace text in [ ] with your own info.', size: 22, italics: true, color: '666666', font })] }));
 
   faqs.forEach((faq, i) => {
-    children.push(new docx.Paragraph({
-      alignment: align, spacing: { before: 250, after: 80 },
-      children: [new docx.TextRun({ text: `${i + 1}. ${isAr ? faq.ar : faq.en}`, bold: true, size: 26, font, color: '1a1a2e' })],
-    }));
-    children.push(new docx.Paragraph({
-      alignment: align, spacing: { after: 40 },
-      children: [new docx.TextRun({ text: isAr ? 'نموذج إجابة:' : 'Sample Answer:', bold: true, size: 22, font, color: '0066CC' })],
-    }));
-    children.push(new docx.Paragraph({
-      alignment: align, spacing: { after: 60, line: 340 }, indent: { left: isAr ? 0 : 400, right: isAr ? 400 : 0 },
-      children: [new docx.TextRun({ text: isAr ? faq.ansAr : faq.ansEn, size: 24, font, color: '333333' })],
-    }));
+    children.push(new docx.Paragraph({ alignment: align, spacing: { before: 250, after: 80 }, children: [new docx.TextRun({ text: `${i + 1}. ${isAr ? faq.ar : faq.en}`, bold: true, size: 26, font, color: '1a1a2e' })] }));
+    children.push(new docx.Paragraph({ alignment: align, spacing: { after: 40 }, children: [new docx.TextRun({ text: isAr ? 'نموذج إجابة:' : 'Sample Answer:', bold: true, size: 22, font, color: '0066CC' })] }));
+    children.push(new docx.Paragraph({ alignment: align, spacing: { after: 60, line: 340 }, indent: { left: isAr ? 0 : 400, right: isAr ? 400 : 0 }, children: [new docx.TextRun({ text: isAr ? faq.ansAr : faq.ansEn, size: 24, font, color: '333333' })] }));
     children.push(new docx.Paragraph({ border: { bottom: { style: docx.BorderStyle.SINGLE, size: 1, color: 'DDDDDD' } }, spacing: { after: 80 }, children: [] }));
   });
 
-  children.push(new docx.Paragraph({
-    alignment: isAr ? docx.AlignmentType.RIGHT : docx.AlignmentType.CENTER, spacing: { before: 300 },
-    children: [new docx.TextRun({ text: isAr ? 'حظاً موفقاً في مقابلتك! 🌟' : 'Good luck with your interview! 🌟', bold: true, size: 26, font, color: '0066CC' })],
-  }));
-  children.push(new docx.Paragraph({
-    alignment: isAr ? docx.AlignmentType.RIGHT : docx.AlignmentType.CENTER, spacing: { before: 80 },
-    children: [new docx.TextRun({ text: isAr ? 'تم إنشاؤه بواسطة Cvistan' : 'Generated by Cvistan', size: 20, color: '999999', font })],
-  }));
+  children.push(new docx.Paragraph({ alignment: isAr ? docx.AlignmentType.RIGHT : docx.AlignmentType.CENTER, spacing: { before: 300 }, children: [new docx.TextRun({ text: isAr ? 'حظاً موفقاً في مقابلتك! 🌟' : 'Good luck with your interview! 🌟', bold: true, size: 26, font, color: '0066CC' })] }));
+  children.push(new docx.Paragraph({ alignment: isAr ? docx.AlignmentType.RIGHT : docx.AlignmentType.CENTER, spacing: { before: 80 }, children: [new docx.TextRun({ text: isAr ? 'تم إنشاؤه بواسطة Cvistan' : 'Generated by Cvistan', size: 20, color: '999999', font })] }));
 
   return new docx.Document({
-    sections: [{
-      properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1200, right: 1200, bottom: 1200, left: 1200 } } },
-      children,
-    }],
+    sections: [{ properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1200, right: 1200, bottom: 1200, left: 1200 } } }, children }],
   });
+}
+
+// ══════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════
+function cvSectionTitle(text: string, font: string, docx: any): any {
+  return new docx.Paragraph({
+    spacing: { before: 200, after: 80 },
+    border: { bottom: { style: docx.BorderStyle.SINGLE, size: 2, color: '0c8eeb' } },
+    children: [new docx.TextRun({ text, bold: true, size: 26, font, color: '0c8eeb' })],
+  });
+}
+
+function fmtDate(month: number | null | undefined, year: number | null | undefined): string {
+  if (!year) return '';
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  if (month && month >= 1 && month <= 12) return `${months[month - 1]} ${year}`;
+  return `${year}`;
 }
