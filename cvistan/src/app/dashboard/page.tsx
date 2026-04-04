@@ -65,8 +65,10 @@ export default function DashboardPage() {
             </div>
             <span className="font-display text-lg font-bold">Cvistan</span>
           </a>
-          <a href="/account" className="text-sm text-surface-500 hover:text-surface-700">Account</a>
-        </div>
+<div className="flex items-center gap-4">
+            <a href="/learn" className="text-sm text-surface-500 hover:text-brand-600 transition-colors">Learn about CVs</a>
+            <a href="/account" className="text-sm text-surface-500 hover:text-surface-700">Account</a>
+          </div>        </div>
       </nav>
 
       <main className="max-w-5xl mx-auto px-6 py-10">
