@@ -86,8 +86,9 @@ export default function BuilderPage() {
             <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
               <FileText className="w-4 h-4 text-white" />
             </div>
-            <span className="font-display text-lg font-bold text-surface-900 hidden sm:block">Cvistan</span>
+            <span className="font-display text-lg font-bold text-surface-900 hidden sm:block">CVistan</span>
           </a>
+          <a href="/learn" className="text-sm text-surface-500 hover:text-brand-600 transition-colors hidden sm:block">Learn</a>
 
           {/* Desktop stepper */}
           <div className="hidden lg:flex items-center gap-1">
