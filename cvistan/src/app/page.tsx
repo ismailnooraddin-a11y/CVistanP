@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { FileText, Globe, Download, Mail, Send, ChevronRight } from 'lucide-react';
+import { FileText, Globe, Download, Mail, ChevronRight, BookOpen } from 'lucide-react';
 import { useBuilderStore } from '@/store/builder';
 import { AppLanguage } from '@/types';
 
@@ -28,6 +28,10 @@ export default function HomePage() {
           <span className="font-display text-xl font-bold text-surface-900">Cvistan</span>
         </div>
         <div className="flex items-center gap-3">
+          <a href="/learn" className="text-sm text-surface-500 hover:text-brand-600 transition-colors hidden sm:flex items-center gap-1.5">
+            <BookOpen className="w-4 h-4" />
+            Learn about CVs
+          </a>
           <a href="/auth/signin" className="text-sm text-surface-500 hover:text-surface-700 transition-colors hidden sm:block">
             Sign In
           </a>
@@ -87,6 +91,18 @@ export default function HomePage() {
               </motion.div>
             )}
           </div>
+
+          {/* Learn about CVs link */}
+          <div className="mt-5">
+            
+              href="/learn"
+              className="inline-flex items-center gap-2 text-sm text-surface-400 hover:text-brand-600 transition-colors font-medium group"
+            >
+              <BookOpen className="w-4 h-4 group-hover:scale-110 transition-transform" />
+              New to CVs? Learn what makes a great CV
+              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </a>
+          </div>
         </motion.div>
 
         {/* Features */}
@@ -118,6 +134,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-surface-400">
           <span>&copy; {new Date().getFullYear()} Cvistan</span>
           <div className="flex gap-6">
+            <a href="/learn" className="hover:text-surface-600 transition-colors">Learn about CVs</a>
             <a href="/privacy" className="hover:text-surface-600 transition-colors">Privacy Policy</a>
             <a href="/terms" className="hover:text-surface-600 transition-colors">Terms of Service</a>
           </div>
