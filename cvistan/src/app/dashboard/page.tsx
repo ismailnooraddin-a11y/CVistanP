@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useBuilderStore } from '@/store/builder';
 import { Button } from '@/components/ui/FormElements';
 import {
-  FileText, Plus, Pencil, Trash2, Clock, Download, Mail,
-  LogOut, BookOpen, Copy, ChevronRight, User,
+  FileText, Plus, Pencil, Trash2, Clock,
+  LogOut, BookOpen, Copy, User,
 } from 'lucide-react';
 
 interface SavedResume {
@@ -37,16 +37,20 @@ export default function DashboardPage() {
       const { createClient } = await import('@/lib/supabase');
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
+
       if (!user) {
         router.push('/auth/signin');
         return;
       }
+
       setUserEmail(user.email || '');
+
       const { data } = await supabase
         .from('resumes')
         .select('id, title, selected_template, status, updated_at, language, resume_personal_info(full_name, job_title, email)')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
+
       setResumes(data || []);
     } catch (err) {
       console.error(err);
@@ -70,16 +74,16 @@ export default function DashboardPage() {
   };
 
   const handleNewCv = () => {
-  const draftCount = resumes.filter((r) => r.status === 'draft').length;
+    const draftCount = resumes.filter((r) => r.status === 'draft').length;
 
-  if (draftCount >= MAX_DRAFT_CVS) {
-    alert('You can only have 3 saved draft CVs at the same time.');
-    return;
-  }
+    if (draftCount >= MAX_DRAFT_CVS) {
+      alert('You can only have 3 saved draft CVs at the same time.');
+      return;
+    }
 
-  resetBuilder();
-  router.push('/builder');
-};
+    resetBuilder();
+    router.push('/builder');
+  };
 
   const handleEditCv = (id: string) => {
     router.push(`/builder?id=${id}`);
@@ -90,16 +94,16 @@ export default function DashboardPage() {
       const { createClient } = await import('@/lib/supabase');
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-if (!user) return;
 
-const draftCount = resumes.filter((r) => r.status === 'draft').length;
+      if (!user) return;
 
-if (draftCount >= MAX_DRAFT_CVS) {
-  alert('You can only have 3 saved draft CVs at the same time.');
-  return;
-}
+      const draftCount = resumes.filter((r) => r.status === 'draft').length;
 
-      const pi = resume.resume_personal_info?.[0];
+      if (draftCount >= MAX_DRAFT_CVS) {
+        alert('You can only have 3 saved draft CVs at the same time.');
+        return;
+      }
+
       const { data } = await supabase
         .from('resumes')
         .insert({
@@ -122,6 +126,7 @@ if (draftCount >= MAX_DRAFT_CVS) {
 
   const handleDeleteCv = async (id: string) => {
     if (!confirm('Are you sure you want to delete this CV? This cannot be undone.')) return;
+
     try {
       const { createClient } = await import('@/lib/supabase');
       const supabase = createClient();
@@ -132,29 +137,26 @@ if (draftCount >= MAX_DRAFT_CVS) {
     }
   };
 
- const formatDate = (dateStr: string) => {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return d.toLocaleDateString();
-};
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return d.toLocaleDateString();
+  };
 
-const draftCount = resumes.filter((r) => r.status === 'draft').length;
-const reachedDraftLimit = draftCount >= MAX_DRAFT_CVS;
-
-return (
+  const draftCount = resumes.filter((r) => r.status === 'draft').length;
+  const reachedDraftLimit = draftCount >= MAX_DRAFT_CVS;
 
   return (
     <div className="min-h-screen bg-surface-50">
-      {/* Nav */}
       <nav className="bg-white border-b border-surface-100 px-6 py-4 sticky top-0 z-30">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <a href="/" className="flex items-center gap-2">
@@ -180,7 +182,6 @@ return (
       </nav>
 
       <main className="max-w-5xl mx-auto px-6 py-8">
-        {/* Welcome section */}
         <div className="bg-white rounded-2xl border border-surface-100 p-6 mb-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
@@ -192,14 +193,21 @@ return (
                 <p className="text-sm text-surface-500">{userEmail}</p>
               </div>
             </div>
-            <Button onClick={handleNewCv} size="lg">
-              <Plus className="w-4 h-4" />
-              Create New CV
-            </Button>
+
+            <div>
+              <Button onClick={handleNewCv} size="lg" disabled={reachedDraftLimit}>
+                <Plus className="w-4 h-4" />
+                Create New CV
+              </Button>
+              {reachedDraftLimit && (
+                <p className="text-sm text-red-600 mt-2">
+                  You already have 3 saved draft CVs. Delete one or complete one before creating another.
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Quick tip */}
         <div className="bg-brand-50 border border-brand-100 rounded-xl p-4 mb-8 flex items-start gap-3">
           <BookOpen className="w-5 h-5 text-brand-600 flex-shrink-0 mt-0.5" />
           <div>
@@ -208,15 +216,14 @@ return (
           </div>
         </div>
 
-        {/* Resumes list */}
-        <<div className="mb-4">
-  <h2 className="text-lg font-semibold text-surface-800">
-    My CVs {resumes.length > 0 && <span className="text-surface-400 font-normal text-sm">({resumes.length})</span>}
-  </h2>
-  <p className="text-sm text-surface-500 mt-1">
-    Draft CVs: {draftCount} / {MAX_DRAFT_CVS}
-  </p>
-</div>
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-surface-800">
+            My CVs {resumes.length > 0 && <span className="text-surface-400 font-normal text-sm">({resumes.length})</span>}
+          </h2>
+          <p className="text-sm text-surface-500 mt-1">
+            Draft CVs: {draftCount} / {MAX_DRAFT_CVS}
+          </p>
+        </div>
 
         {loading ? (
           <div className="text-center py-16 text-surface-400">
@@ -230,23 +237,25 @@ return (
             <p className="text-sm text-surface-400 mb-6 max-w-xs mx-auto">
               Create your first CV and start applying for jobs with confidence.
             </p>
+
             <Button onClick={handleNewCv} size="lg" disabled={reachedDraftLimit}>
-  <Plus className="w-4 h-4" />
-  Create New CV
-</Button>
+              <Plus className="w-4 h-4" />
+              Create New CV
+            </Button>
+
             {reachedDraftLimit && (
-  <p className="text-sm text-red-600 mt-2">
-    You already have 3 saved draft CVs. Delete one or complete one before creating another.
-  </p>
-)}
+              <p className="text-sm text-red-600 mt-2">
+                You already have 3 saved draft CVs. Delete one or complete one before creating another.
+              </p>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {resumes.map((r) => {
               const pi = r.resume_personal_info?.[0];
+
               return (
                 <div key={r.id} className="bg-white rounded-xl border border-surface-100 hover:border-surface-200 hover:shadow-md transition-all group">
-                  {/* Card header */}
                   <div className="p-5 pb-3">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1 min-w-0">
@@ -257,14 +266,17 @@ return (
                           <p className="text-sm text-surface-500 truncate">{pi.job_title}</p>
                         )}
                       </div>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ml-2 ${
-                        r.status === 'finalized'
-                          ? 'bg-green-50 text-green-700'
-                          : 'bg-amber-50 text-amber-700'
-                      }`}>
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ml-2 ${
+                          r.status === 'finalized'
+                            ? 'bg-green-50 text-green-700'
+                            : 'bg-amber-50 text-amber-700'
+                        }`}
+                      >
                         {r.status === 'finalized' ? 'Complete' : 'Draft'}
                       </span>
                     </div>
+
                     <div className="flex items-center gap-3 text-xs text-surface-400">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
@@ -275,7 +287,6 @@ return (
                     </div>
                   </div>
 
-                  {/* Card actions */}
                   <div className="border-t border-surface-100 px-5 py-3 flex items-center gap-2">
                     <button
                       onClick={() => handleEditCv(r.id)}
@@ -284,7 +295,9 @@ return (
                       <Pencil className="w-3.5 h-3.5" />
                       Edit
                     </button>
+
                     <div className="w-px h-4 bg-surface-200"></div>
+
                     <button
                       onClick={() => handleDuplicateCv(r)}
                       className="flex items-center gap-1.5 text-sm text-surface-500 hover:text-surface-700 transition-colors"
@@ -293,7 +306,9 @@ return (
                       <Copy className="w-3.5 h-3.5" />
                       Duplicate
                     </button>
+
                     <div className="flex-1"></div>
+
                     <button
                       onClick={() => handleDeleteCv(r.id)}
                       className="flex items-center gap-1 text-sm text-surface-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
@@ -306,10 +321,14 @@ return (
               );
             })}
 
-            {/* Add new card */}
             <button
               onClick={handleNewCv}
-              className="bg-white rounded-xl border-2 border-dashed border-surface-200 hover:border-brand-300 hover:bg-brand-50/30 transition-all p-5 flex flex-col items-center justify-center min-h-[160px] group"
+              disabled={reachedDraftLimit}
+              className={`rounded-xl border-2 border-dashed p-5 flex flex-col items-center justify-center min-h-[160px] group transition-all ${
+                reachedDraftLimit
+                  ? 'bg-surface-50 border-surface-200 cursor-not-allowed opacity-60'
+                  : 'bg-white border-surface-200 hover:border-brand-300 hover:bg-brand-50/30'
+              }`}
             >
               <div className="w-12 h-12 bg-surface-100 group-hover:bg-brand-100 rounded-full flex items-center justify-center mb-3 transition-colors">
                 <Plus className="w-5 h-5 text-surface-400 group-hover:text-brand-600 transition-colors" />
