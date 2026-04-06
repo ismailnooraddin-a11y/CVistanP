@@ -26,6 +26,7 @@ export default function DashboardPage() {
   const [signingOut, setSigningOut] = useState(false);
   const router = useRouter();
   const resetBuilder = useBuilderStore((s) => s.resetBuilder);
+  const MAX_DRAFT_CVS = 3;
 
   useEffect(() => {
     loadData();
@@ -69,9 +70,16 @@ export default function DashboardPage() {
   };
 
   const handleNewCv = () => {
-    resetBuilder();
-    router.push('/builder');
-  };
+  const draftCount = resumes.filter((r) => r.status === 'draft').length;
+
+  if (draftCount >= MAX_DRAFT_CVS) {
+    alert('You can only have 3 saved draft CVs at the same time.');
+    return;
+  }
+
+  resetBuilder();
+  router.push('/builder');
+};
 
   const handleEditCv = (id: string) => {
     router.push(`/builder?id=${id}`);
@@ -82,7 +90,14 @@ export default function DashboardPage() {
       const { createClient } = await import('@/lib/supabase');
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+if (!user) return;
+
+const draftCount = resumes.filter((r) => r.status === 'draft').length;
+
+if (draftCount >= MAX_DRAFT_CVS) {
+  alert('You can only have 3 saved draft CVs at the same time.');
+  return;
+}
 
       const pi = resume.resume_personal_info?.[0];
       const { data } = await supabase
@@ -117,20 +132,25 @@ export default function DashboardPage() {
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
+ const formatDate = (dateStr: string) => {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return d.toLocaleDateString();
-  };
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return d.toLocaleDateString();
+};
+
+const draftCount = resumes.filter((r) => r.status === 'draft').length;
+const reachedDraftLimit = draftCount >= MAX_DRAFT_CVS;
+
+return (
 
   return (
     <div className="min-h-screen bg-surface-50">
@@ -189,11 +209,14 @@ export default function DashboardPage() {
         </div>
 
         {/* Resumes list */}
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-surface-800">
-            My CVs {resumes.length > 0 && <span className="text-surface-400 font-normal text-sm">({resumes.length})</span>}
-          </h2>
-        </div>
+        <<div className="mb-4">
+  <h2 className="text-lg font-semibold text-surface-800">
+    My CVs {resumes.length > 0 && <span className="text-surface-400 font-normal text-sm">({resumes.length})</span>}
+  </h2>
+  <p className="text-sm text-surface-500 mt-1">
+    Draft CVs: {draftCount} / {MAX_DRAFT_CVS}
+  </p>
+</div>
 
         {loading ? (
           <div className="text-center py-16 text-surface-400">
@@ -207,10 +230,15 @@ export default function DashboardPage() {
             <p className="text-sm text-surface-400 mb-6 max-w-xs mx-auto">
               Create your first CV and start applying for jobs with confidence.
             </p>
-            <Button onClick={handleNewCv} size="lg">
-              <Plus className="w-4 h-4" />
-              Create Your First CV
-            </Button>
+            <Button onClick={handleNewCv} size="lg" disabled={reachedDraftLimit}>
+  <Plus className="w-4 h-4" />
+  Create New CV
+</Button>
+            {reachedDraftLimit && (
+  <p className="text-sm text-red-600 mt-2">
+    You already have 3 saved draft CVs. Delete one or complete one before creating another.
+  </p>
+)}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
