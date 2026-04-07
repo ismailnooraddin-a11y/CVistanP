@@ -27,6 +27,8 @@ interface BuilderState {
   setLanguage: (lang: AppLanguage) => void;
   setCurrentStep: (step: BuilderStep) => void;
   setGuestSession: (id: string) => void;
+  setResume: (resume) => set({ resume }),
+  setIsSaving: (value) => set({ isSaving: value }),
   setResumeId: (id: string) => void;
   updatePersonalInfo: (info: Partial<PersonalInfo>) => void;
   toggleLink: (type: SocialLink['type']) => void;
@@ -53,6 +55,8 @@ interface BuilderState {
   removeCertification: (id: string) => void;
   setTemplate: (slug: TemplateSlug) => void;
   resetBuilder: () => void;
+  setResume: (resume: ResumeData) => void;
+  setIsSaving: (value: boolean) => void;
 }
 
 const defaultResume: ResumeData = {
