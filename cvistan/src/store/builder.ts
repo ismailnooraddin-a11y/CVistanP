@@ -27,36 +27,42 @@ interface BuilderState {
   setLanguage: (lang: AppLanguage) => void;
   setCurrentStep: (step: BuilderStep) => void;
   setGuestSession: (id: string) => void;
-  setResume: (resume) => set({ resume }),
-  setIsSaving: (value) => set({ isSaving: value }),
   setResumeId: (id: string) => void;
+  setResume: (resume: ResumeData) => void;
+  setIsSaving: (value: boolean) => void;
+
   updatePersonalInfo: (info: Partial<PersonalInfo>) => void;
   toggleLink: (type: SocialLink['type']) => void;
   updateLinkUrl: (type: SocialLink['type'], url: string) => void;
+
   addExperience: () => void;
   updateExperience: (id: string, data: Partial<ExperienceEntry>) => void;
   removeExperience: (id: string) => void;
   addBullet: (experienceId: string) => void;
   updateBullet: (experienceId: string, bulletId: string, text: string) => void;
   removeBullet: (experienceId: string, bulletId: string) => void;
+
   addEducation: () => void;
   updateEducation: (id: string, data: Partial<EducationEntry>) => void;
   removeEducation: (id: string) => void;
+
   addSkill: (name: string) => void;
   removeSkill: (id: string) => void;
+
   addLanguageEntry: () => void;
   updateLanguageEntry: (id: string, data: Partial<LanguageEntry>) => void;
   removeLanguageEntry: (id: string) => void;
+
   addVolunteer: () => void;
   updateVolunteer: (id: string, data: Partial<VolunteerEntry>) => void;
   removeVolunteer: (id: string) => void;
+
   addCertification: () => void;
   updateCertification: (id: string, data: Partial<CertificationEntry>) => void;
   removeCertification: (id: string) => void;
+
   setTemplate: (slug: TemplateSlug) => void;
   resetBuilder: () => void;
-  setResume: (resume: ResumeData) => void;
-  setIsSaving: (value: boolean) => void;
 }
 
 const defaultResume: ResumeData = {
@@ -93,144 +99,357 @@ export const useBuilderStore = create<BuilderState>()(
       isSaving: false,
       resume: { ...defaultResume },
 
-      setLanguage: (lang) => set((s) => ({ language: lang, resume: { ...s.resume, language: lang } })),
+      setLanguage: (lang) =>
+        set((s) => ({
+          language: lang,
+          resume: { ...s.resume, language: lang },
+        })),
+
       setCurrentStep: (step) => set({ currentStep: step }),
       setGuestSession: (id) => set({ guestSessionId: id }),
       setResumeId: (id) => set({ resumeId: id }),
+      setResume: (resume) => set({ resume }),
+      setIsSaving: (value) => set({ isSaving: value }),
 
-      updatePersonalInfo: (info) => set((s) => ({
-        resume: { ...s.resume, personalInfo: { ...s.resume.personalInfo, ...info } },
-      })),
+      updatePersonalInfo: (info) =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            personalInfo: { ...s.resume.personalInfo, ...info },
+          },
+        })),
 
-      toggleLink: (type) => set((s) => {
-        const existing = s.resume.links.find((l) => l.type === type);
-        if (existing) {
-          return { resume: { ...s.resume, links: s.resume.links.map((l) => l.type === type ? { ...l, enabled: !l.enabled } : l) } };
-        }
-        return { resume: { ...s.resume, links: [...s.resume.links, { id: generateId(), type, url: '', enabled: true }] } };
-      }),
+      toggleLink: (type) =>
+        set((s) => {
+          const existing = s.resume.links.find((l) => l.type === type);
 
-      updateLinkUrl: (type, url) => set((s) => ({
-        resume: { ...s.resume, links: s.resume.links.map((l) => l.type === type ? { ...l, url } : l) },
-      })),
+          if (existing) {
+            return {
+              resume: {
+                ...s.resume,
+                links: s.resume.links.map((l) =>
+                  l.type === type ? { ...l, enabled: !l.enabled } : l
+                ),
+              },
+            };
+          }
 
-      addExperience: () => set((s) => ({
-        resume: { ...s.resume, experience: [...s.resume.experience, {
-          id: generateId(), jobTitle: '', company: '', location: '',
-          startMonth: new Date().getMonth() + 1, startYear: new Date().getFullYear(),
-          endMonth: null, endYear: null, isCurrent: false,
-          bullets: [{ id: generateId(), text: '', sortOrder: 0 }],
-          sortOrder: s.resume.experience.length,
-        }] },
-      })),
+          return {
+            resume: {
+              ...s.resume,
+              links: [
+                ...s.resume.links,
+                { id: generateId(), type, url: '', enabled: true },
+              ],
+            },
+          };
+        }),
 
-      updateExperience: (id, data) => set((s) => ({
-        resume: { ...s.resume, experience: s.resume.experience.map((e) => e.id === id ? { ...e, ...data } : e) },
-      })),
+      updateLinkUrl: (type, url) =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            links: s.resume.links.map((l) =>
+              l.type === type ? { ...l, url } : l
+            ),
+          },
+        })),
 
-      removeExperience: (id) => set((s) => ({
-        resume: { ...s.resume, experience: s.resume.experience.filter((e) => e.id !== id) },
-      })),
+      addExperience: () =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            experience: [
+              ...s.resume.experience,
+              {
+                id: generateId(),
+                jobTitle: '',
+                company: '',
+                location: '',
+                startMonth: new Date().getMonth() + 1,
+                startYear: new Date().getFullYear(),
+                endMonth: null,
+                endYear: null,
+                isCurrent: false,
+                bullets: [{ id: generateId(), text: '', sortOrder: 0 }],
+                sortOrder: s.resume.experience.length,
+              },
+            ],
+          },
+        })),
 
-      addBullet: (experienceId) => set((s) => ({
-        resume: { ...s.resume, experience: s.resume.experience.map((e) =>
-          e.id === experienceId ? { ...e, bullets: [...e.bullets, { id: generateId(), text: '', sortOrder: e.bullets.length }] } : e
-        ) },
-      })),
+      updateExperience: (id, data) =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            experience: s.resume.experience.map((e) =>
+              e.id === id ? { ...e, ...data } : e
+            ),
+          },
+        })),
 
-      updateBullet: (experienceId, bulletId, text) => set((s) => ({
-        resume: { ...s.resume, experience: s.resume.experience.map((e) =>
-          e.id === experienceId ? { ...e, bullets: e.bullets.map((b) => b.id === bulletId ? { ...b, text } : b) } : e
-        ) },
-      })),
+      removeExperience: (id) =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            experience: s.resume.experience.filter((e) => e.id !== id),
+          },
+        })),
 
-      removeBullet: (experienceId, bulletId) => set((s) => ({
-        resume: { ...s.resume, experience: s.resume.experience.map((e) =>
-          e.id === experienceId ? { ...e, bullets: e.bullets.filter((b) => b.id !== bulletId) } : e
-        ) },
-      })),
+      addBullet: (experienceId) =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            experience: s.resume.experience.map((e) =>
+              e.id === experienceId
+                ? {
+                    ...e,
+                    bullets: [
+                      ...e.bullets,
+                      {
+                        id: generateId(),
+                        text: '',
+                        sortOrder: e.bullets.length,
+                      },
+                    ],
+                  }
+                : e
+            ),
+          },
+        })),
 
-      addEducation: () => set((s) => ({
-        resume: { ...s.resume, education: [...s.resume.education, {
-          id: generateId(), degree: '', institution: '', location: '',
-          graduationMonth: null, graduationYear: null, gpa: '', thesisProject: '',
-          sortOrder: s.resume.education.length,
-        }] },
-      })),
+      updateBullet: (experienceId, bulletId, text) =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            experience: s.resume.experience.map((e) =>
+              e.id === experienceId
+                ? {
+                    ...e,
+                    bullets: e.bullets.map((b) =>
+                      b.id === bulletId ? { ...b, text } : b
+                    ),
+                  }
+                : e
+            ),
+          },
+        })),
 
-      updateEducation: (id, data) => set((s) => ({
-        resume: { ...s.resume, education: s.resume.education.map((e) => e.id === id ? { ...e, ...data } : e) },
-      })),
+      removeBullet: (experienceId, bulletId) =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            experience: s.resume.experience.map((e) =>
+              e.id === experienceId
+                ? {
+                    ...e,
+                    bullets: e.bullets.filter((b) => b.id !== bulletId),
+                  }
+                : e
+            ),
+          },
+        })),
 
-      removeEducation: (id) => set((s) => ({
-        resume: { ...s.resume, education: s.resume.education.filter((e) => e.id !== id) },
-      })),
+      addEducation: () =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            education: [
+              ...s.resume.education,
+              {
+                id: generateId(),
+                degree: '',
+                institution: '',
+                location: '',
+                graduationMonth: null,
+                graduationYear: null,
+                gpa: '',
+                thesisProject: '',
+                sortOrder: s.resume.education.length,
+              },
+            ],
+          },
+        })),
 
-      addSkill: (name) => set((s) => ({
-        resume: { ...s.resume, skills: [...s.resume.skills, { id: generateId(), name, sortOrder: s.resume.skills.length }] },
-      })),
+      updateEducation: (id, data) =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            education: s.resume.education.map((e) =>
+              e.id === id ? { ...e, ...data } : e
+            ),
+          },
+        })),
 
-      removeSkill: (id) => set((s) => ({
-        resume: { ...s.resume, skills: s.resume.skills.filter((sk) => sk.id !== id) },
-      })),
+      removeEducation: (id) =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            education: s.resume.education.filter((e) => e.id !== id),
+          },
+        })),
 
-      addLanguageEntry: () => set((s) => ({
-        resume: { ...s.resume, languages: [...s.resume.languages, { id: generateId(), name: '', proficiency: 'intermediate', sortOrder: s.resume.languages.length }] },
-      })),
+      addSkill: (name) =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            skills: [
+              ...s.resume.skills,
+              {
+                id: generateId(),
+                name,
+                sortOrder: s.resume.skills.length,
+              },
+            ],
+          },
+        })),
 
-      updateLanguageEntry: (id, data) => set((s) => ({
-        resume: { ...s.resume, languages: s.resume.languages.map((l) => l.id === id ? { ...l, ...data } : l) },
-      })),
+      removeSkill: (id) =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            skills: s.resume.skills.filter((sk) => sk.id !== id),
+          },
+        })),
 
-      removeLanguageEntry: (id) => set((s) => ({
-        resume: { ...s.resume, languages: s.resume.languages.filter((l) => l.id !== id) },
-      })),
+      addLanguageEntry: () =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            languages: [
+              ...s.resume.languages,
+              {
+                id: generateId(),
+                name: '',
+                proficiency: 'intermediate',
+                sortOrder: s.resume.languages.length,
+              },
+            ],
+          },
+        })),
 
-      addVolunteer: () => set((s) => ({
-        resume: { ...s.resume, volunteer: [...s.resume.volunteer, {
-          id: generateId(), title: '', organization: '', category: 'volunteer',
-          location: '', startMonth: null, startYear: null, endMonth: null, endYear: null,
-          isCurrent: false, description: '', sortOrder: s.resume.volunteer.length,
-        }] },
-      })),
+      updateLanguageEntry: (id, data) =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            languages: s.resume.languages.map((l) =>
+              l.id === id ? { ...l, ...data } : l
+            ),
+          },
+        })),
 
-      updateVolunteer: (id, data) => set((s) => ({
-        resume: { ...s.resume, volunteer: s.resume.volunteer.map((v) => v.id === id ? { ...v, ...data } : v) },
-      })),
+      removeLanguageEntry: (id) =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            languages: s.resume.languages.filter((l) => l.id !== id),
+          },
+        })),
 
-      removeVolunteer: (id) => set((s) => ({
-        resume: { ...s.resume, volunteer: s.resume.volunteer.filter((v) => v.id !== id) },
-      })),
+      addVolunteer: () =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            volunteer: [
+              ...s.resume.volunteer,
+              {
+                id: generateId(),
+                title: '',
+                organization: '',
+                category: 'volunteer',
+                location: '',
+                startMonth: null,
+                startYear: null,
+                endMonth: null,
+                endYear: null,
+                isCurrent: false,
+                description: '',
+                sortOrder: s.resume.volunteer.length,
+              },
+            ],
+          },
+        })),
 
-      addCertification: () => set((s) => ({
-        resume: { ...s.resume, certifications: [...s.resume.certifications, {
-          id: generateId(), name: '', organization: '',
-          issueMonth: null, issueYear: null, expiryMonth: null, expiryYear: null,
-          noExpiry: true, trainingMode: null, credentialId: '',
-          sortOrder: s.resume.certifications.length,
-        }] },
-      })),
+      updateVolunteer: (id, data) =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            volunteer: s.resume.volunteer.map((v) =>
+              v.id === id ? { ...v, ...data } : v
+            ),
+          },
+        })),
 
-      updateCertification: (id, data) => set((s) => ({
-        resume: { ...s.resume, certifications: s.resume.certifications.map((c) => c.id === id ? { ...c, ...data } : c) },
-      })),
+      removeVolunteer: (id) =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            volunteer: s.resume.volunteer.filter((v) => v.id !== id),
+          },
+        })),
 
-      removeCertification: (id) => set((s) => ({
-        resume: { ...s.resume, certifications: s.resume.certifications.filter((c) => c.id !== id) },
-      })),
+      addCertification: () =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            certifications: [
+              ...s.resume.certifications,
+              {
+                id: generateId(),
+                name: '',
+                organization: '',
+                issueMonth: null,
+                issueYear: null,
+                expiryMonth: null,
+                expiryYear: null,
+                noExpiry: true,
+                trainingMode: null,
+                credentialId: '',
+                sortOrder: s.resume.certifications.length,
+              },
+            ],
+          },
+        })),
 
-      setTemplate: (slug) => set((s) => ({ resume: { ...s.resume, selectedTemplate: slug } })),
+      updateCertification: (id, data) =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            certifications: s.resume.certifications.map((c) =>
+              c.id === id ? { ...c, ...data } : c
+            ),
+          },
+        })),
 
-      resetBuilder: () => set({
-        currentStep: 'personal-info', guestSessionId: null, resumeId: null,
-        resume: { ...defaultResume },
-      }),
+      removeCertification: (id) =>
+        set((s) => ({
+          resume: {
+            ...s.resume,
+            certifications: s.resume.certifications.filter((c) => c.id !== id),
+          },
+        })),
+
+      setTemplate: (slug) =>
+        set((s) => ({
+          resume: { ...s.resume, selectedTemplate: slug },
+        })),
+
+      resetBuilder: () =>
+        set({
+          currentStep: 'personal-info',
+          guestSessionId: null,
+          resumeId: null,
+          isSaving: false,
+          resume: { ...defaultResume },
+        }),
     }),
     {
       name: 'cvistan-builder',
       partialize: (state) => ({
-        language: state.language, currentStep: state.currentStep,
-        guestSessionId: state.guestSessionId, resumeId: state.resumeId,
+        language: state.language,
+        currentStep: state.currentStep,
+        guestSessionId: state.guestSessionId,
+        resumeId: state.resumeId,
         resume: state.resume,
       }),
     }
