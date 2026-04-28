@@ -1,9 +1,11 @@
+import type { ResumeData } from '@/types/resume';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { renderResumeHtml } from '@/templates/renderer';
 
+// Better typing using z.custom
 const generateSchema = z.object({
-  resume: z.record(z.unknown()),
+  resume: z.custom<ResumeData>(),
   language: z.enum(['en', 'ar']).default('en'),
 });
 
@@ -22,6 +24,7 @@ export async function POST(req: NextRequest) {
     const { resume, language } = validation.data;
 
     const cvHtml = renderResumeHtml(resume, true);
+
     const fullHtml = `<!DOCTYPE html>
 <html dir="${language === 'ar' ? 'rtl' : 'ltr'}" lang="${language}">
 <head>
@@ -35,8 +38,12 @@ export async function POST(req: NextRequest) {
 </html>`;
 
     return NextResponse.json({ html: fullHtml });
+
   } catch (err: any) {
     console.error('Generate error:', err);
-    return NextResponse.json({ error: err.message || 'Generation failed' }, { status: 500 });
+    return NextResponse.json(
+      { error: err?.message || 'Generation failed' },
+      { status: 500 }
+    );
   }
 }
