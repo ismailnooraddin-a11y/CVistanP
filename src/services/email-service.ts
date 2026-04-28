@@ -20,7 +20,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 interface SendEmailOptions {
   to: string;
-  resume: ResumeData;
+  resume: Partial<ResumeData> & { personalInfo?: Partial<ResumeData['personalInfo']> };  // ✅ Allows partial
   language: 'en' | 'ar';
 }
 
