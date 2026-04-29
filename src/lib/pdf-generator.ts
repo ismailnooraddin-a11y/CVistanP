@@ -142,7 +142,7 @@ export async function generateResumePdf(data: any): Promise<void> {
   }
 
   // Links
-  const enabledLinks = data.links.filter((l) => l.enabled && l.url);
+  const enabledLinks = (data.links as Array<{ enabled?: boolean; url?: string; type?: string }>).filter((l) => l.enabled && l.url);
   if (enabledLinks.length > 0) {
     setFont('normal', 8);
     drawText(enabledLinks.map((l) => `${l.type}: ${l.url}`).join('  |  '), marginL, y, { align: 'center', color: accentColor });
