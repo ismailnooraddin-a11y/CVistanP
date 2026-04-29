@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Fixed: moved to top-level key
-  serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium'],
+experimental: {
+    serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium'],
+  },
   images: {
     remotePatterns: [
       {
