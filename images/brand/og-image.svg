@@ -1,0 +1,11 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#0B1F33"/>
+  <circle cx="980" cy="95" r="240" fill="#D8B76C" opacity="0.23"/>
+  <circle cx="120" cy="560" r="280" fill="#1F6F9F" opacity="0.28"/>
+  <rect x="78" y="76" width="1044" height="478" rx="44" stroke="#D8B76C" stroke-width="2" opacity="0.75"/>
+  <text x="100" y="190" fill="#F7DFA3" font-family="Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="7">HOLLYWOOD SMILE STUDIO</text>
+  <text x="100" y="315" fill="white" font-family="Georgia, serif" font-size="72" font-weight="700">Premium Dental Clinic</text>
+  <text x="100" y="390" fill="white" font-family="Georgia, serif" font-size="72" font-weight="700">in Erbil</text>
+  <text x="100" y="470" fill="#D7E5EF" font-family="Arial, sans-serif" font-size="32">Cosmetic Dentistry | Implants | Smile Design</text>
+  <text x="100" y="522" fill="#F7DFA3" font-family="Arial, sans-serif" font-size="26">32 Park, 100 Meter Road, Erbil</text>
+</svg>

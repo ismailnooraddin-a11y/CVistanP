@@ -1,0 +1,10 @@
+{
+  "name": "hollywood-smile-studio-erbil",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production-ready static frontend package for Hollywood Smile Studio Erbil.",
+  "scripts": {
+    "serve": "python3 -m http.server 8080",
+    "check:static": "python3 -S tools/check_static.py"
+  }
+}
