@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://hollywoodsmile-erbil.com/sitemap.xml
