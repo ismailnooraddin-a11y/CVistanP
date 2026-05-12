@@ -1,0 +1,846 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Patient — ICU CDS</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/png" href="assets/logo.png" />
+  <style>
+    /* page-local helpers (kept inline because they only apply here) */
+    .meds-body { padding-top: 4px; padding-bottom: 4px; }
+    .shap-axis-note { display: flex; justify-content: space-between; }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  <div id="chrome-banner"></div>
+  <div id="chrome-header"></div>
+
+  <div class="app-layout">
+    <main class="main" id="main-content">
+
+      <nav aria-label="Breadcrumb" class="breadcrumb">
+        <a href="dashboard.html">ICU Dashboard</a>
+        <span class="sep" aria-hidden="true">›</span>
+        <span id="bc-bed"></span>
+        <span class="sep" aria-hidden="true">›</span>
+        <span class="current" id="bc-name"></span>
+      </nav>
+
+      <!-- H1 for the page (visually replaced by the patient banner h2 styling) -->
+      <h1 class="sr-only" id="page-h1">Patient detail</h1>
+
+      <section class="patient-banner" id="patient-banner" aria-labelledby="page-h1"></section>
+
+      <div class="detail-grid two-col">
+        <div class="detail-left">
+
+          <!-- VITALS -->
+          <section class="card" aria-label="Vitals">
+            <div class="card-header">
+              <h3>Current vitals · last 6 h</h3>
+              <span class="muted small">Auto-updated · source: bedside monitor</span>
+            </div>
+            <div class="vitals-strip" id="vitals-strip"></div>
+          </section>
+
+          <!-- AI PREDICTION -->
+          <section class="ai-card" aria-label="AI prediction">
+            <div class="ai-label">▶ AI prediction · AKI risk model</div>
+            <div class="risk-big">
+              <div class="num" id="risk-num">—</div>
+              <div class="lbl">probability of AKI<br/>within 24 h</div>
+            </div>
+            <div class="horizon" id="horizon"></div>
+            <button class="explain-btn" id="explain-btn" type="button"
+                    aria-expanded="false" aria-controls="explain-panel"
+                    onclick="toggleExplain()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                   aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+              </svg>
+              <span class="explain-btn-label">Explain prediction</span>
+            </button>
+          </section>
+
+          <!-- EXPLANATION (toggled) -->
+          <section class="explain-panel" id="explain-panel" hidden aria-label="Prediction explanation">
+            <div class="explain-tabs" role="tablist">
+              <button class="tab active" data-tab="shap" role="tab"
+                      type="button" aria-selected="true" aria-controls="explain-body"
+                      onclick="switchTab('shap')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M3 3v18h18"/><rect x="6" y="11" width="3" height="7"/>
+                  <rect x="11" y="7" width="3" height="11"/>
+                  <rect x="16" y="14" width="3" height="4"/>
+                </svg>
+                SHAP (default)
+              </button>
+              <button class="tab" data-tab="cpe" role="tab"
+                      type="button" aria-selected="false" aria-controls="explain-body"
+                      onclick="switchTab('cpe')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/>
+                  <path d="M8.5 8.5 15.5 15.5"/>
+                </svg>
+                CPE — Causal Pathway
+                <span class="new-pill">NEW</span>
+              </button>
+            </div>
+
+            <div class="explain-body" id="explain-body" role="tabpanel"></div>
+          </section>
+
+          <!-- Recent labs -->
+          <section class="card" aria-label="Recent labs">
+            <div class="card-header">
+              <h3>Recent labs · last 24 h</h3>
+              <span class="muted small">Source: KNTB Laboratory · auto-sync</span>
+            </div>
+            <table class="labs-table">
+              <tbody id="labs-body"></tbody>
+            </table>
+          </section>
+
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="detail-right">
+
+          <section class="card" aria-label="Admission">
+            <div class="card-header"><h3>Admission</h3></div>
+            <div class="card-body small" id="admit-body"></div>
+          </section>
+
+          <section class="card" aria-label="Active medications">
+            <div class="card-header">
+              <h3>Active medications</h3>
+              <span class="muted small" id="meds-count">—</span>
+            </div>
+            <div class="card-body meds-body" id="meds-body"></div>
+          </section>
+
+          <section class="card" aria-label="Problems and allergies">
+            <div class="card-header"><h3>Problems &amp; allergies</h3></div>
+            <div class="card-body small" id="problems-body"></div>
+          </section>
+
+          <section class="card" aria-label="Care team">
+            <div class="card-header"><h3>Care team</h3></div>
+            <div class="card-body small" id="careteam-body"></div>
+          </section>
+
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="chrome-footer"></div>
+
+  <style>
+    /* Two-column detail grid only on wider viewports */
+    @media (min-width: 1101px) {
+      .detail-grid.two-col {
+        grid-template-columns: 1fr 360px;
+      }
+    }
+  </style>
+
+  <script src="app.js"></script>
+  <script>
+    if (!sessionStorage.getItem('icu_user')) {
+      window.location.href = 'index.html';
+    }
+
+    const params = new URLSearchParams(location.search);
+    const id = params.get('id') || 'p1';
+    const p = PATIENTS.find(x => x.id === id) || PATIENTS[0];
+
+    renderChrome();
+
+    // Breadcrumb
+    document.getElementById('bc-bed').textContent = `Bed ${p.bed}`;
+    document.getElementById('bc-name').textContent = `${p.family}, ${p.given}`;
+    document.title = `${p.family}, ${p.given} — ICU CDS`;
+
+    // Banner
+    const cls = riskClass(p.risk);
+    const banner = document.getElementById('patient-banner');
+    banner.classList.add('is-' + cls);
+    banner.innerHTML = `
+      <div>
+        <h2>${p.family}, ${p.given} <span class="age-sex">· ${p.age} ${p.sex}</span></h2>
+        <div class="meta">
+          <span>MRN <strong class="mono">${p.mrn}</strong></span>
+          <span>Bed <strong class="mono">${p.bed}</strong></span>
+          <span>Admitted <strong>${p.admit}</strong> (${p.los.toFixed(1)} d)</span>
+          <span>Primary Dx: <strong>${p.dx}</strong></span>
+        </div>
+      </div>
+      <div class="badges">
+        <span class="risk-tag risk-${cls}">${riskLabel(p.risk)}</span>
+      </div>
+    `;
+
+    // Vitals strip — trajectories now generated from the patient's trend.
+    // higherIsWorse: HR/Temp/RR=true, MAP/SpO2/UOP=false
+    const vitals = [
+      { name: 'HR',   val: p.hr,             unit: 'bpm',  range: '60–100',
+        alarm: p.hr > 110 || p.hr < 50, warn: p.hr > 100 || p.hr < 60,
+        series: [...makeVitalSeries(p.hr,   p.trend, true),  p.hr] },
+      { name: 'MAP',  val: p.map,            unit: 'mmHg', range: '≥ 65',
+        alarm: p.map < 65, warn: p.map < 70,
+        series: [...makeVitalSeries(p.map,  p.trend, false), p.map] },
+      { name: 'SpO₂', val: p.spo2,           unit: '%',    range: '≥ 94',
+        alarm: p.spo2 < 92, warn: p.spo2 < 94,
+        series: [...makeVitalSeries(p.spo2, p.trend, false), p.spo2] },
+      { name: 'Temp', val: p.temp.toFixed(1),unit: '°C',   range: '36.5–37.5',
+        alarm: p.temp > 38.5, warn: p.temp > 37.8,
+        series: [...makeVitalSeries(p.temp, p.trend, true),  p.temp] },
+      { name: 'RR',   val: p.rr,             unit: '/min', range: '12–20',
+        alarm: p.rr > 25, warn: p.rr > 20,
+        series: [...makeVitalSeries(p.rr,   p.trend, true),  p.rr] },
+      { name: 'UOP',  val: p.uop,            unit: 'mL/h', range: '≥ 30',
+        alarm: p.uop < 20, warn: p.uop < 30,
+        series: [...makeVitalSeries(p.uop,  p.trend, false), p.uop] },
+    ];
+    document.getElementById('vitals-strip').innerHTML = vitals.map(v => {
+      const state = v.alarm ? 'alarm' : v.warn ? 'warn' : '';
+      const color = v.alarm ? '#c0392b' : v.warn ? '#b45309' : '#5b6878';
+      const glyph = v.alarm
+        ? '<span class="alarm-glyph" aria-label="critical">●</span>'
+        : v.warn ? '<span class="alarm-glyph" aria-label="warning">▲</span>' : '';
+      return `
+        <div class="vital ${state}">
+          <div class="vname">${v.name}${glyph}</div>
+          <div><span class="vval">${v.val}</span><span class="vunit">${v.unit}</span></div>
+          <div class="vrange">target ${v.range}</div>
+          ${sparkline(v.series, color)}
+        </div>
+      `;
+    }).join('');
+
+    // AI prediction values
+    document.getElementById('risk-num').textContent = `${(p.risk*100).toFixed(0)}%`;
+    const hours = p.risk >= 0.9 ? '4 – 6'
+                : p.risk >= 0.75 ? '6 – 12'
+                : p.risk >= 0.4  ? '12 – 24' : '> 24';
+    document.getElementById('horizon').innerHTML =
+      `Predicted AKI onset within <strong>${hours} hours</strong> · model confidence <strong>high</strong>`;
+
+    // Admission card — patient-specific
+    document.getElementById('admit-body').innerHTML = `
+      <strong>Source:</strong> ${p.admitSource}<br/>
+      <strong>Admitted:</strong> ${p.admit} ${p.admitTime || ''}<br/>
+      <strong>ICU LOS:</strong> ${p.los.toFixed(1)} days<br/>
+      <strong>Predicted disposition:</strong> ${p.disposition}<br/>
+      <strong>Code status:</strong> ${p.codeStatus}
+    `;
+
+    // Problems & allergies — patient-specific
+    document.getElementById('problems-body').innerHTML = `
+      <strong>Allergies:</strong> ${p.allergies}<br/>
+      <strong>Problems:</strong> ${p.problems}
+    `;
+
+    // Care team — patient-specific
+    document.getElementById('careteam-body').innerHTML = `
+      Attending: ${p.careTeam.attending}<br/>
+      Resident: ${p.careTeam.resident}<br/>
+      Nurse: ${p.careTeam.nurse}<br/>
+      Pharmacist: ${p.careTeam.pharmacist}
+    `;
+
+    // Active medications — keyed to the demo case (post-CABG with declining UOP)
+    const meds = id === 'p1' ? [
+      { name: 'Noradrenalin', dose: '0.18 µg/kg/min IV', tag: 'vasopressor' },
+      { name: 'Furosemide',   dose: '20 mg IV q6h',     tag: 'diuretic · nephrotoxic risk' },
+      { name: 'Vancomycin',   dose: '1 g IV q12h',      tag: 'antibiotic · nephrotoxic' },
+      { name: 'Piperacillin/Tazobactam', dose: '4.5 g IV q8h', tag: 'antibiotic · nephrotoxic' },
+      { name: 'Pantoprazole', dose: '40 mg IV q24h',    tag: '' },
+      { name: 'Heparin',      dose: '5000 U SC q12h',   tag: 'DVT prophylaxis' },
+      { name: 'Insulin (sliding scale)', dose: 'per protocol', tag: '' },
+    ] : id === 'p2' ? [
+      { name: 'Noradrenalin',  dose: '0.22 µg/kg/min IV', tag: 'vasopressor' },
+      { name: 'Piperacillin/Tazobactam', dose: '4.5 g IV q6h', tag: 'antibiotic · nephrotoxic' },
+      { name: 'Hydrocortisone',dose: '50 mg IV q6h',      tag: 'septic shock' },
+      { name: 'Salbutamol neb',dose: 'q4h prn',            tag: 'COPD' },
+      { name: 'Pantoprazole',  dose: '40 mg IV q24h',     tag: '' },
+      { name: 'Heparin',       dose: '5000 U SC q12h',    tag: 'DVT prophylaxis' },
+    ] : id === 'p3' ? [
+      { name: 'Crystalloid (NaCl 0.9%)', dose: '200 mL/h', tag: 'rhabdo protocol' },
+      { name: 'Noradrenalin', dose: '0.10 µg/kg/min IV',  tag: 'vasopressor' },
+      { name: 'Sodium bicarb', dose: 'titrate to urine pH ≥ 6.5', tag: 'pigment protection' },
+      { name: 'Cefazolin',    dose: '2 g IV q8h',          tag: 'antibiotic' },
+      { name: 'Morphine PCA', dose: 'per protocol',         tag: 'analgesia' },
+      { name: 'Heparin',      dose: '5000 U SC q12h',      tag: 'DVT prophylaxis' },
+    ] : [
+      { name: 'Noradrenalin', dose: '0.12 µg/kg/min IV', tag: 'vasopressor' },
+      { name: 'Ceftriaxone',  dose: '2 g IV q24h',       tag: 'antibiotic' },
+      { name: 'Pantoprazole', dose: '40 mg IV q24h',     tag: '' },
+      { name: 'Heparin',      dose: '5000 U SC q12h',    tag: 'DVT prophylaxis' },
+    ];
+    document.getElementById('meds-count').textContent = `${meds.length} active`;
+    document.getElementById('meds-body').innerHTML = meds.map(m => `
+      <div class="med-row">
+        <div><span class="name">${m.name}</span></div>
+        <div class="dose">${m.dose}${m.tag?` · <span class="muted small">${m.tag}</span>`:''}</div>
+      </div>
+    `).join('');
+
+    // Recent labs — patient-specific (kept dense for the demo case)
+    const labSets = {
+      p1: [
+        { name: 'Creatinine',  val: '2.4',  unit: 'mg/dL', ref: '0.6 – 1.2',     flag: 'high' },
+        { name: 'BUN',         val: '38',   unit: 'mg/dL', ref: '7 – 20',        flag: 'high' },
+        { name: 'eGFR',        val: '28',   unit: 'mL/min/1.73m²', ref: '≥ 60', flag: 'low' },
+        { name: 'Lactate',     val: '3.1',  unit: 'mmol/L',ref: '0.5 – 2.0',     flag: 'high' },
+        { name: 'WBC',         val: '14.6', unit: '×10⁹/L',ref: '4.0 – 11.0',    flag: 'high' },
+        { name: 'CRP',         val: '142',  unit: 'mg/L',  ref: '< 10',          flag: 'high' },
+        { name: 'Potassium',   val: '5.4',  unit: 'mmol/L',ref: '3.5 – 5.1',     flag: 'high' },
+        { name: 'Sodium',      val: '136',  unit: 'mmol/L',ref: '136 – 145',     flag: '' },
+        { name: 'Hemoglobin',  val: '9.8',  unit: 'g/dL',  ref: '12.0 – 15.5',   flag: 'low' },
+        { name: 'Platelets',   val: '188',  unit: '×10⁹/L',ref: '150 – 400',     flag: '' },
+      ],
+      p2: [
+        { name: 'Lactate',     val: '3.1',  unit: 'mmol/L',ref: '0.5 – 2.0',     flag: 'high' },
+        { name: 'WBC',         val: '18.2', unit: '×10⁹/L',ref: '4.0 – 11.0',    flag: 'high' },
+        { name: 'CRP',         val: '218',  unit: 'mg/L',  ref: '< 10',          flag: 'high' },
+        { name: 'Procalcitonin', val: '6.4',unit: 'ng/mL', ref: '< 0.5',         flag: 'high' },
+        { name: 'Creatinine',  val: '1.9',  unit: 'mg/dL', ref: '0.6 – 1.2',     flag: 'high' },
+        { name: 'pH',          val: '7.28', unit: '',      ref: '7.35 – 7.45',   flag: 'low' },
+        { name: 'PaO₂/FiO₂',   val: '180',  unit: '',      ref: '> 300',         flag: 'low' },
+      ],
+      p3: [
+        { name: 'CK',          val: '6800', unit: 'U/L',   ref: '< 200',         flag: 'high' },
+        { name: 'Myoglobin',   val: '4200', unit: 'µg/L',  ref: '< 110',         flag: 'high' },
+        { name: 'Creatinine',  val: '1.8',  unit: 'mg/dL', ref: '0.6 – 1.2',     flag: 'high' },
+        { name: 'Potassium',   val: '5.6',  unit: 'mmol/L',ref: '3.5 – 5.1',     flag: 'high' },
+        { name: 'Phosphate',   val: '6.2',  unit: 'mg/dL', ref: '2.5 – 4.5',     flag: 'high' },
+        { name: 'pH',          val: '7.30', unit: '',      ref: '7.35 – 7.45',   flag: 'low' },
+      ],
+    };
+    const labs = labSets[id] || labSets.p1;
+    document.getElementById('labs-body').innerHTML = labs.map(l => `
+      <tr>
+        <td>${l.name}</td>
+        <td class="val ${l.flag}">${l.val} <span class="muted small">${l.unit}</span></td>
+        <td class="ref">ref ${l.ref}</td>
+        <td class="ref">07:14</td>
+      </tr>
+    `).join('');
+
+    /* =================================================================
+       EXPLANATION PANEL — SHAP and CPE views
+       ================================================================= */
+
+    let currentTab = 'shap';
+    let explainOpen = false;
+
+    function toggleExplain() {
+      explainOpen = !explainOpen;
+      const panel = document.getElementById('explain-panel');
+      const btn = document.getElementById('explain-btn');
+      const label = btn.querySelector('.explain-btn-label');
+      panel.hidden = !explainOpen;
+      btn.classList.toggle('open', explainOpen);
+      btn.setAttribute('aria-expanded', String(explainOpen));
+      label.textContent = explainOpen ? 'Hide explanation' : 'Explain prediction';
+      if (explainOpen) {
+        renderTab();
+        setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+      }
+    }
+
+    function switchTab(t) {
+      currentTab = t;
+      document.querySelectorAll('.explain-tabs .tab').forEach(el => {
+        const active = el.dataset.tab === t;
+        el.classList.toggle('active', active);
+        el.setAttribute('aria-selected', String(active));
+      });
+      renderTab();
+    }
+
+    function renderTab() {
+      document.getElementById('explain-body').innerHTML =
+        currentTab === 'shap' ? renderShap() : renderCpe();
+    }
+
+    /* ------------- SHAP view (intentionally dense / technical) ------------- */
+    function renderShap() {
+      const baseValue = 0.342;
+      const finalValue = 0.941;
+      const features = [
+        { name: 'heart_rate_lag_6h_mean',         value: 108.4,   contrib: +0.121 },
+        { name: 'urine_output_diff_6h',           value: -34.2,   contrib: +0.094 },
+        { name: 'creatinine_lag_3h_max',          value: 2.31,    contrib: +0.087 },
+        { name: 'map_min_4h_window',              value: 62.1,    contrib: +0.074 },
+        { name: 'lactate_trend_6h_slope',         value: 0.41,    contrib: +0.063 },
+        { name: 'med_furosemide_admin_24h',       value: 1,       contrib: +0.052 },
+        { name: 'bun_x_age_interaction',          value: 2584,    contrib: +0.048 },
+        { name: 'hr_variability_lag_2h',          value: 6.8,     contrib: +0.041 },
+        { name: 'temp_max_diff_8h',               value: 1.4,     contrib: +0.039 },
+        { name: 'med_vasopressor_count',          value: 1,       contrib: +0.033 },
+        { name: 'wbc_lag_12h',                    value: 14.6,    contrib: +0.028 },
+        { name: 'sodium_potassium_ratio',         value: 25.2,    contrib: -0.011 },
+        { name: 'platelets_norm',                 value: 0.47,    contrib: -0.014 },
+        { name: 'apache_ii_component',            value: 18,      contrib: +0.022 },
+        { name: 'ventilation_hours_total',        value: 42,      contrib: +0.018 },
+        { name: 'comorbidity_index_diabetes',     value: 1,       contrib: +0.015 },
+        { name: 'weight_change_pct_48h',          value: 2.1,     contrib: +0.012 },
+        { name: 'bicarbonate_lag_4h',             value: 19.4,    contrib: -0.008 },
+      ];
+
+      const W = 760, rowH = 18, padTop = 10, padBottom = 30;
+      const labelEndX = 195;
+      const axisX     = 270;
+      const posMaxW   = W - axisX - 60;
+      const negMaxW   = axisX - labelEndX - 8;
+      const H = padTop + features.length * rowH + padBottom;
+      const maxAbs = Math.max(...features.map(f => Math.abs(f.contrib)));
+
+      const bars = features.map((f, i) => {
+        const y = padTop + i * rowH;
+        const isPos = f.contrib >= 0;
+        const w = (Math.abs(f.contrib) / maxAbs) * (isPos ? posMaxW : negMaxW);
+        const x = isPos ? axisX : axisX - w;
+        const color = isPos ? '#e94b3c' : '#3677c9';
+        const valStr = (typeof f.value === 'number' && Math.abs(f.value) < 100)
+          ? f.value.toFixed(2) : f.value.toString();
+        return `
+          <text x="${labelEndX - 4}" y="${y + 13}" text-anchor="end"
+                font-size="10.5" fill="#3a4658"
+                font-family="ui-monospace,monospace">
+            ${f.name} = ${valStr}
+          </text>
+          <rect x="${x}" y="${y + 3}" width="${w}" height="${rowH - 6}"
+                fill="${color}" opacity="0.85"/>
+          <text x="${isPos ? axisX + w + 5 : axisX - w - 5}"
+                y="${y + 13}" font-size="10" fill="#4a5668"
+                text-anchor="${isPos ? 'start' : 'end'}"
+                font-family="ui-monospace,monospace">
+            ${isPos ? '+' : ''}${f.contrib.toFixed(3)}
+          </text>
+        `;
+      }).join('');
+
+      const axisY = padTop + features.length * rowH + 4;
+      return `
+        <div class="shap-meta">
+          <div><strong>Method:</strong> shap.KernelExplainer</div>
+          <div><strong>Background:</strong> 100 samples</div>
+          <div><strong>E[f(X)]:</strong> ${baseValue.toFixed(3)}</div>
+          <div><strong>f(x):</strong> ${finalValue.toFixed(3)}</div>
+          <div><strong>Σ contrib:</strong> ${(finalValue - baseValue).toFixed(3)}</div>
+        </div>
+
+        <div class="shap-chart-wrap">
+          <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"
+               role="img" aria-label="SHAP feature attribution bar chart">
+            <line x1="${axisX}" y1="${padTop}" x2="${axisX}" y2="${axisY}"
+                  stroke="#b9c0c9" stroke-width="1"/>
+            ${bars}
+            <line x1="${labelEndX}" y1="${axisY}" x2="${W - 20}" y2="${axisY}"
+                  stroke="#b9c0c9" stroke-width="1"/>
+            <text x="${axisX - 6}" y="${axisY + 16}" text-anchor="end"
+                  font-size="10" fill="#5b6878"
+                  font-family="ui-monospace,monospace">← lowers risk</text>
+            <text x="${axisX + 6}" y="${axisY + 16}"
+                  font-size="10" fill="#5b6878"
+                  font-family="ui-monospace,monospace">raises risk →</text>
+            <text x="${W - 20}" y="${axisY + 16}" text-anchor="end"
+                  font-size="10" fill="#5b6878"
+                  font-family="ui-monospace,monospace">SHAP value (impact on f(x))</text>
+          </svg>
+        </div>
+
+        <div class="shap-note">
+          <strong>Feature attributions</strong> show how each engineered input pushed the prediction
+          away from the population baseline (E[f(X)] = ${baseValue.toFixed(3)}) toward the patient's
+          value (f(x) = ${finalValue.toFixed(3)}). Higher-ranked features had larger marginal impact.
+          <br/><br/>
+          <span class="sub">Interpretation note: SHAP values reflect statistical association with the
+          predicted outcome under the trained model — they do not imply causal effect or
+          indicate appropriate clinical action.</span>
+        </div>
+
+        <div class="shap-disclaimer">
+          shap 0.44.1 · KernelExplainer · 18 of 142 features shown · sorted by |φ|
+        </div>
+      `;
+    }
+
+    /* ------------- CPE view (clean, causal, actionable) ------------- */
+    function renderCpe() {
+      const CPE_CASES = {
+        p1: {
+          title: 'volume depletion pathway',
+          timelineTitle: 'Volume pathway trajectory',
+          seriesA: { label: 'BUN', values: [18,19,21,24,27,31,33,35,36,37,38,38], unit: 'mg/dL', color: '#e87722' },
+          seriesB: { label: 'Creatinine', values: [1.4,1.4,1.5,1.6,1.7,1.9,2.0,2.1,2.2,2.3,2.3,2.4], unit: 'mg/dL', color: '#c0392b' },
+          markerIndex: 5,
+          marker: 'Vasopressor + furosemide started',
+          boxes: [
+            { title: 'BUN &uarr;', sub: '18 &rarr; 38 mg/dL' },
+            { title: 'Volume depletion', sub: 'pre-renal pathway' },
+            { title: 'Creatinine &uarr;', sub: '1.4 &rarr; 2.4 mg/dL' },
+          ],
+          arrows: ['causal signal', 'change appears<br/>after ~3 h', 'AKI risk rises<br/>~2 h later'],
+          correlated: ['Heart rate &uarr;', 'Temperature &uarr;'],
+          aki: 'predicted in 4&ndash;6 h',
+          narrative: 'AKI risk is being driven by a <strong>volume depletion pathway</strong>. BUN rose first (18 &rarr; 38 mg/dL), and creatinine followed about 3 hours later (1.4 &rarr; 2.4 mg/dL). This supports a pre-renal mechanism rather than heart rate or temperature as the main actionable upstream signal.',
+          actions: [
+            ['Re-assess volume status now', 'BUN-driven trajectory suggests pre-renal physiology; use passive leg raise, echo, or fluid challenge per local protocol.'],
+            ['Review diuretic and nephrotoxic exposure', 'Active orders include furosemide, vancomycin, and piperacillin/tazobactam; consider dose adjustment or temporary hold.'],
+            ['Increase BUN / creatinine monitoring to q2h', 'Both are on the recovered causal path, so closer sampling improves the early-warning window.'],
+            ['Do not treat heart rate or fever as the main AKI target', 'They are correlated in this case but are not the upstream driver of the AKI pathway.'],
+          ],
+        },
+        p2: {
+          title: 'sepsis-related hypoperfusion pathway',
+          timelineTitle: 'Sepsis / perfusion trajectory',
+          seriesA: { label: 'Lactate', values: [1.8,1.9,2.0,2.1,2.3,2.5,2.7,2.8,2.9,3.0,3.1,3.1], unit: 'mmol/L', color: '#e87722' },
+          seriesB: { label: 'MAP', values: [72,71,70,69,67,65,64,63,62,61,61,61], unit: 'mmHg', color: '#c0392b', invert: true },
+          markerIndex: 6,
+          marker: 'Escalating vasopressor requirement',
+          boxes: [
+            { title: 'Lactate &uarr;', sub: '1.8 &rarr; 3.1 mmol/L' },
+            { title: 'Septic hypoperfusion', sub: 'MAP 72 &rarr; 61 mmHg' },
+            { title: 'Creatinine &uarr;', sub: '1.0 &rarr; 1.9 mg/dL' },
+          ],
+          arrows: ['sepsis signal', 'renal effect<br/>after ~2 h', 'AKI risk rises<br/>~4 h later'],
+          correlated: ['Heart rate &uarr;', 'SpO&#8322; &darr;'],
+          aki: 'predicted in 6&ndash;12 h',
+          narrative: 'AKI risk is being driven by a <strong>sepsis-related hypoperfusion pathway</strong>. Lactate increased first (1.8 &rarr; 3.1 mmol/L), MAP then fell, and creatinine rose soon after (1.0 &rarr; 1.9 mg/dL). This supports impaired renal perfusion as the main actionable upstream signal rather than tachycardia or low oxygen saturation alone.',
+          actions: [
+            ['Treat perfusion as the upstream target', 'Reassess MAP goal, vasopressor dose, capillary refill, lactate clearance, and fluid responsiveness.'],
+            ['Source control and antimicrobial review', 'The pathway is sepsis-driven, so timely infection control changes the upstream signal.'],
+            ['Trend lactate, MAP, and creatinine closely', 'These variables define the patient-specific pathway from shock physiology to AKI risk.'],
+            ['Do not anchor on tachycardia or SpO2 alone', 'They are clinically important but are not the recovered causal route to AKI in this case.'],
+          ],
+        },
+        p3: {
+          title: 'rhabdomyolysis pathway',
+          timelineTitle: 'Muscle injury / renal trajectory',
+          seriesA: { label: 'CK / myoglobin', values: [2100,2600,3100,3800,4500,5100,5700,6200,6500,6700,6800,6800], unit: 'U/L', color: '#e87722' },
+          seriesB: { label: 'Creatinine', values: [0.9,0.9,1.0,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8], unit: 'mg/dL', color: '#c0392b' },
+          markerIndex: 4,
+          marker: 'Crush injury / reperfusion period',
+          boxes: [
+            { title: 'CK / myoglobin &uarr;', sub: '2,100 &rarr; 6,800 U/L' },
+            { title: 'Pigment nephropathy', sub: 'rhabdomyolysis pathway' },
+            { title: 'Creatinine &uarr;', sub: '0.9 &rarr; 1.8 mg/dL' },
+          ],
+          arrows: ['muscle injury<br/>signal', 'renal injury<br/>after ~4 h', 'AKI risk rises<br/>~3 h later'],
+          correlated: ['Heart rate &uarr;', 'Post-op pain &uarr;'],
+          aki: 'predicted in 6&ndash;12 h',
+          narrative: 'AKI risk is being driven by a <strong>rhabdomyolysis pathway</strong>. CK and myoglobin rose first (2,100 &rarr; 6,800 U/L), and creatinine followed later (0.9 &rarr; 1.8 mg/dL). This supports pigment-related tubular injury as the main actionable upstream signal rather than tachycardia or post-operative pain alone.',
+          actions: [
+            ['Treat pigment nephropathy as the upstream target', 'Prioritize rhabdomyolysis protocol, renal-protective hydration, and urine output goals per local guidance.'],
+            ['Trend CK / myoglobin with creatinine', 'The pathway starts with muscle injury, not with the later creatinine rise.'],
+            ['Review nephrotoxic medications and contrast exposure', 'Pigment injury increases vulnerability to additional renal stressors.'],
+            ['Do not anchor on pain or tachycardia alone', 'They can explain distress but do not explain the AKI pathway recovered for this patient.'],
+          ],
+        },
+      };
+
+      const c = CPE_CASES[p.id] || CPE_CASES.p1;
+      const hours = ['-12h','-11h','-10h','-9h','-8h','-7h','-6h','-5h','-4h','-3h','-2h','-1h'];
+
+      /* ============= TIMELINE — stacked small multiples =============
+         Each series gets its own panel and Y-axis so values are readable.
+         A shared vertical marker line crosses both panels at the
+         intervention point; the X-axis is shared at the bottom. */
+      function renderTimeline() {
+        const W = 1040, H = 320;
+        const padL = 78, padR = 38;
+        const plotW = W - padL - padR;
+        const stepX = plotW / (c.seriesA.values.length - 1);
+
+        // Two stacked panels
+        const panelH = 92;
+        const panelGap = 36;
+        const panelA = { y: 32, h: panelH };
+        const panelB = { y: panelA.y + panelH + panelGap, h: panelH };
+        const xAxisY = panelB.y + panelB.h;
+        const xLabelY = xAxisY + 18;
+
+        function panel(series, py, ph, defsAccum) {
+          const values = series.values;
+          const rawMin = Math.min(...values);
+          const rawMax = Math.max(...values);
+          const margin = (rawMax - rawMin || 1) * 0.15;
+          const yMin = rawMin - margin;
+          const yMax = rawMax + margin;
+          const rng = yMax - yMin || 1;
+          const yToPx = v => py + ph - ((v - yMin) / rng) * ph;
+
+          const pts = values.map((v, i) => [padL + i * stepX, yToPx(v), v]);
+          const linePath = pts.map((pt, i) =>
+            `${i === 0 ? 'M' : 'L'}${pt[0].toFixed(1)},${pt[1].toFixed(1)}`).join(' ');
+          const fillPath = `${linePath} L${pts[pts.length-1][0]},${py+ph} L${padL},${py+ph} Z`;
+
+          // Y-axis ticks: min, mid, max (use real data extremes for labels)
+          const decimals = rawMax < 10 ? 1 : 0;
+          const fmt = v => Math.abs(v) >= 1000 ? v.toLocaleString('en-US') : v.toFixed(decimals);
+          const ticks = [
+            { v: rawMin, y: yToPx(rawMin) },
+            { v: (rawMin + rawMax) / 2, y: yToPx((rawMin + rawMax) / 2) },
+            { v: rawMax, y: yToPx(rawMax) },
+          ];
+          const gridAndTicks = ticks.map(t => `
+            <line x1="${padL}" y1="${t.y}" x2="${W - padR}" y2="${t.y}"
+                  stroke="#eef1f5" stroke-width="1"/>
+            <line x1="${padL - 5}" y1="${t.y}" x2="${padL}" y2="${t.y}"
+                  stroke="#b9c0c9" stroke-width="1"/>
+            <text x="${padL - 9}" y="${t.y + 4}" text-anchor="end"
+                  font-size="11" fill="#5b6878"
+                  font-family="ui-monospace,monospace">${fmt(t.v)}</text>
+          `).join('');
+
+          const gradId = `grad_${p.id}_${series.label.replace(/[^a-z]/gi, '')}`;
+          defsAccum.push(`
+            <linearGradient id="${gradId}" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%"   stop-color="${series.color}" stop-opacity="0.20"/>
+              <stop offset="100%" stop-color="${series.color}" stop-opacity="0"/>
+            </linearGradient>
+          `);
+
+          return `
+            <!-- Panel label + current value badge -->
+            <text x="${padL}" y="${py - 10}" font-size="12" font-weight="700"
+                  fill="${series.color}" letter-spacing="0.6">
+              ${series.label.toUpperCase()} · ${series.unit}
+            </text>
+            <text x="${W - padR}" y="${py - 10}" text-anchor="end"
+                  font-size="12" fill="#1a2332" font-weight="700"
+                  font-family="ui-monospace,monospace">
+              now ${fmt(values[values.length - 1])} ${series.unit}
+            </text>
+
+            <!-- Grid + Y-axis ticks -->
+            ${gridAndTicks}
+
+            <!-- Y-axis line -->
+            <line x1="${padL}" y1="${py}" x2="${padL}" y2="${py + ph}"
+                  stroke="#b9c0c9" stroke-width="1"/>
+            <!-- Bottom axis of panel -->
+            <line x1="${padL}" y1="${py + ph}" x2="${W - padR}" y2="${py + ph}"
+                  stroke="#b9c0c9" stroke-width="1"/>
+
+            <!-- Series fill + line + dots -->
+            <path d="${fillPath}" fill="url(#${gradId})"/>
+            <path d="${linePath}" fill="none" stroke="${series.color}" stroke-width="2.5"/>
+            ${pts.map(pt =>
+              `<circle cx="${pt[0]}" cy="${pt[1]}" r="3" fill="${series.color}"/>`).join('')}
+          `;
+        }
+
+        const defs = [];
+        const panelABody = panel(c.seriesA, panelA.y, panelA.h, defs);
+        const panelBBody = panel(c.seriesB, panelB.y, panelB.h, defs);
+
+        // Shared marker line
+        const markerX = padL + c.markerIndex * stepX;
+        const markerAnchor = markerX > W * 0.7 ? 'end' : 'start';
+        const markerLabelX = markerX + (markerAnchor === 'end' ? -8 : 8);
+
+        // Shared X-axis labels (every other hour to avoid crowding)
+        const xLabels = hours.map((h, i) => {
+          if (i % 2 !== 0 && i !== hours.length - 1) return '';
+          const x = padL + i * stepX;
+          return `<text x="${x}" y="${xLabelY}" text-anchor="middle"
+                        font-size="11" fill="#5b6878">${h}</text>`;
+        }).join('');
+
+        return `
+          <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"
+               class="pathway-svg" role="img"
+               aria-label="Causal pathway timeline — two stacked panels">
+            <defs>${defs.join('')}</defs>
+
+            <!-- Shared intervention marker spanning both panels -->
+            <line x1="${markerX}" y1="${panelA.y - 2}"
+                  x2="${markerX}" y2="${panelB.y + panelB.h + 2}"
+                  stroke="#5b6878" stroke-width="1.4" stroke-dasharray="5 4"/>
+            <text x="${markerLabelX}" y="${panelA.y - 18}"
+                  text-anchor="${markerAnchor}"
+                  font-size="12" fill="#3a4658" font-style="italic">
+              ${c.marker}
+            </text>
+
+            ${panelABody}
+            ${panelBBody}
+
+            <!-- NOW guideline -->
+            <line x1="${W - padR}" y1="${panelA.y - 2}"
+                  x2="${W - padR}" y2="${panelB.y + panelB.h + 2}"
+                  stroke="#1c2a3a" stroke-width="1.5"/>
+
+            <!-- X-axis labels -->
+            ${xLabels}
+            <text x="${padL}" y="${xLabelY + 18}" text-anchor="start"
+                  font-size="10" fill="#8693a4">
+              Hours before now
+            </text>
+          </svg>
+        `;
+      }
+
+      /* ============= PATHWAY DIAGRAM — restructured =============
+         Layout has two clearly separated bands:
+           1. Top band: the main causal chain. Arrow labels live in a
+              dedicated row BELOW the boxes, so they never overlap the
+              box content again.
+           2. Bottom band: correlated-only signals shown clearly apart
+              from the causal chain, with an explicit header explaining
+              that these are statistically associated but not on the
+              recovered causal path. */
+      function renderPathway() {
+        // ---- main chain geometry ----
+        const BOX_Y = 28, BOX_H = 78;
+        const BOX1 = { x: 30,  w: 178 };
+        const BOX2 = { x: 296, w: 218 };
+        const BOX3 = { x: 600, w: 180 };
+        const AKI  = { x: 856, w: 110, y: 23, h: 88 };
+        const arrowY = BOX_Y + BOX_H / 2;
+        const A1 = { x1: BOX1.x + BOX1.w + 6, x2: BOX2.x - 6 };
+        const A2 = { x1: BOX2.x + BOX2.w + 6, x2: BOX3.x - 6 };
+        const A3 = { x1: BOX3.x + BOX3.w + 6, x2: AKI.x - 6 };
+        const labelY = BOX_Y + BOX_H + 12;
+
+        // ---- correlated band geometry ----
+        const dividerY = 174;
+        const corrHeaderY = 200;
+        const corrBoxY = 216;
+        const corrBoxH = 50;
+        const corrBoxes = [
+          { x: 200, w: 240, label: c.correlated[0] },
+          { x: 600, w: 240, label: c.correlated[1] },
+        ];
+
+        const arrowDefs = `
+          <marker id="arr_${p.id}" viewBox="0 0 10 10" refX="9" refY="5"
+                  markerWidth="9" markerHeight="9" orient="auto">
+            <path d="M0,0 L10,5 L0,10 Z" fill="#1c2a3a"/>
+          </marker>
+        `;
+
+        const arrowLabel = (x1, x2, html) => {
+          const w = x2 - x1 + 30;
+          return `<foreignObject x="${x1 - 15}" y="${labelY}" width="${w}" height="48">
+            <div xmlns="http://www.w3.org/1999/xhtml" class="path-label">${html}</div>
+          </foreignObject>`;
+        };
+
+        const box = (b, filled, content) => `
+          <rect x="${b.x}" y="${BOX_Y}" width="${b.w}" height="${BOX_H}" rx="10"
+                fill="${filled ? '#fcf6f0' : '#fff'}"
+                stroke="#e87722" stroke-width="2.5"/>
+          <text x="${b.x + b.w/2}" y="${BOX_Y + 35}" text-anchor="middle"
+                font-size="20" font-weight="800" fill="#1a2332">${content.title}</text>
+          <text x="${b.x + b.w/2}" y="${BOX_Y + 60}" text-anchor="middle"
+                font-size="13" fill="#3a4658">${content.sub}</text>
+        `;
+
+        const arrow = (a) => `
+          <line x1="${a.x1}" y1="${arrowY}" x2="${a.x2}" y2="${arrowY}"
+                stroke="#1c2a3a" stroke-width="3.5"
+                marker-end="url(#arr_${p.id})"/>
+        `;
+
+        const correlatedBoxes = corrBoxes.map(b => `
+          <rect x="${b.x}" y="${corrBoxY}" width="${b.w}" height="${corrBoxH}" rx="8"
+                fill="#fff" stroke="#b9c0c9" stroke-dasharray="5 4" stroke-width="1.5"/>
+          <text x="${b.x + b.w/2}" y="${corrBoxY + 32}" text-anchor="middle"
+                font-size="16" fill="#5b6878">${b.label}</text>
+        `).join('');
+
+        return `
+          <svg width="1040" height="284" viewBox="0 0 1040 284"
+               class="pathway-svg pathway-main" role="img"
+               aria-label="Causal pathway diagram">
+            <defs>${arrowDefs}</defs>
+
+            <!-- =========== MAIN CAUSAL CHAIN =========== -->
+            ${box(BOX1, true,  c.boxes[0])}
+            ${arrow(A1)}
+            ${box(BOX2, false, c.boxes[1])}
+            ${arrow(A2)}
+            ${box(BOX3, true,  c.boxes[2])}
+            ${arrow(A3)}
+
+            <!-- AKI destination box -->
+            <rect x="${AKI.x}" y="${AKI.y}" width="${AKI.w}" height="${AKI.h}"
+                  rx="12" fill="#1c2a3a"/>
+            <text x="${AKI.x + AKI.w/2}" y="${AKI.y + 40}" text-anchor="middle"
+                  font-size="26" font-weight="800" fill="#fff">AKI</text>
+            <text x="${AKI.x + AKI.w/2}" y="${AKI.y + 66}" text-anchor="middle"
+                  font-size="12" font-weight="700" fill="#e87722">${c.aki}</text>
+
+            <!-- Arrow labels live in a dedicated band BELOW the boxes -->
+            ${arrowLabel(A1.x1, A1.x2, c.arrows[0])}
+            ${arrowLabel(A2.x1, A2.x2, c.arrows[1])}
+            ${arrowLabel(A3.x1, A3.x2, c.arrows[2])}
+
+            <!-- =========== DIVIDER =========== -->
+            <line x1="30" y1="${dividerY}" x2="1010" y2="${dividerY}"
+                  stroke="#d9dde3" stroke-width="1"/>
+
+            <!-- =========== CORRELATED-ONLY BAND =========== -->
+            <text x="520" y="${corrHeaderY}" text-anchor="middle"
+                  font-size="12" font-weight="700" fill="#5b6878"
+                  letter-spacing="1">
+              ALSO MOVING · STATISTICALLY ASSOCIATED · NOT ON THE CAUSAL PATH
+            </text>
+            ${correlatedBoxes}
+          </svg>
+        `;
+      }
+
+      const actions = c.actions.map(a => `
+        <li>
+          <span class="check" aria-hidden="true">✓</span>
+          <span>
+            <span class="label-strong">${a[0]}</span>
+            <span class="why">${a[1]}</span>
+          </span>
+        </li>
+      `).join('');
+
+      return `
+        <div class="cpe-grid">
+          <div class="cpe-section">
+            <h4><span class="step">1</span> What's happening · ${c.timelineTitle}</h4>
+            <div class="path-card">${renderTimeline()}</div>
+          </div>
+
+          <div class="cpe-section">
+            <h4><span class="step">2</span> Why · patient-specific causal pathway</h4>
+            <div class="path-card">${renderPathway()}</div>
+          </div>
+
+          <div class="cpe-section">
+            <h4><span class="step">3</span> Clinical interpretation</h4>
+            <div class="cpe-narrative">${c.narrative}</div>
+          </div>
+
+          <div class="cpe-section">
+            <h4><span class="step">4</span> Suggested actions · upstream of the cause</h4>
+            <ul class="action-list">${actions}</ul>
+          </div>
+
+          <div class="cpe-footnote">
+            CPE v0.4.2 · patient-specific causal graph · rank-stability 0.94
+          </div>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
