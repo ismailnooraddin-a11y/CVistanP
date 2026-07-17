@@ -1,0 +1,12 @@
+{
+  "name": "EstateFlow Pro",
+  "short_name": "EstateFlow",
+  "description": "Complete real estate operating system",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#f6f7fb",
+  "theme_color": "#5b5ce2",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,19 @@
+"use client";
+
+import Link from "next/link";
+import { ArrowRight, Building2, CheckCircle2, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, Sparkles } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { Button, Input } from "@/components/ui";
+
+export function SignInPage() {
+  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("lana@northstar.demo");
+  const [password, setPassword] = useState("EstateFlow2026!");
+  const [loading, setLoading] = useState(false);
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    setLoading(true);
+    window.setTimeout(() => { window.location.href = "/dashboard"; }, 450);
+  };
+  return <main className="auth-page"><section className="auth-brand-panel"><div className="auth-brand"><span className="logo-mark"><span /><span /><span /></span><strong>EstateFlow</strong></div><div className="auth-brand-copy"><span className="eyebrow">THE REAL ESTATE OPERATING SYSTEM</span><h1>Run your entire agency from one intelligent workspace.</h1><p>Sales, properties, communications, contracts, finance, people, marketing, analytics, and AI—connected by design.</p><div className="auth-benefits"><span><CheckCircle2 size={17} /> One secure source of truth</span><span><CheckCircle2 size={17} /> Multi-branch and multi-company ready</span><span><CheckCircle2 size={17} /> Modular plans and entitlements</span></div></div><div className="auth-security"><ShieldCheck size={19} /><span><strong>Enterprise-grade foundation</strong><small>Tenant isolation · RBAC · audit trails · encrypted transport</small></span></div><div className="auth-orbit auth-orbit--one" /><div className="auth-orbit auth-orbit--two" /><div className="auth-floating-card auth-floating-card--one"><Building2 size={19} /><span><strong>128</strong><small>Active properties</small></span></div><div className="auth-floating-card auth-floating-card--two"><Sparkles size={19} /><span><strong>AI insight</strong><small>3 hot leads need action</small></span></div></section><section className="auth-form-panel"><div className="auth-form-wrap"><div className="auth-form-heading"><span className="auth-form-icon"><LockKeyhole size={21} /></span><h2>Welcome back</h2><p>Sign in to continue to your EstateFlow workspace.</p></div><form onSubmit={submit} className="auth-form"><label className="field"><span className="field__label">Work email</span><div className="input-with-icon"><Mail size={17} /><input className="input" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></div></label><label className="field"><span className="field__label">Password</span><div className="input-with-icon"><LockKeyhole size={17} /><input className="input" type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} required /><button type="button" onClick={() => setShowPassword((value) => !value)}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label><div className="auth-form-options"><label><input type="checkbox" defaultChecked /> Remember this device</label><button type="button">Forgot password?</button></div><Button type="submit" size="lg" disabled={loading}>{loading ? "Signing in..." : <>Sign in <ArrowRight size={17} /></>}</Button><div className="auth-divider"><span>or continue with</span></div><div className="auth-sso"><Button type="button" variant="secondary">Microsoft</Button><Button type="button" variant="secondary">Google</Button></div></form><div className="demo-credentials"><strong>Demo workspace</strong><p>The credentials are prefilled. This build uses local demo data and does not transmit the password.</p></div><p className="auth-legal">By continuing, you agree to the Terms of Service and Privacy Policy.</p></div></section></main>;
+}
