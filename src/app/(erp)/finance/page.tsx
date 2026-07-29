@@ -1,2 +1,0 @@
-import PageShell from '@/components/page-shell';
-export default function Page(){return <PageShell title="Finance" subtitle="Module foundation is connected and ready for the next delivery"><div className="card"><h3>Module ready for implementation</h3><p className="muted">This module is isolated in its own route and will use the shared authentication, branch permissions, audit and database foundation.</p></div></PageShell>}
