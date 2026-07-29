@@ -1,0 +1,2 @@
+import Link from 'next/link';
+export default function Login(){return <main className="landing"><div className="login-card"><h1>Welcome back</h1><p>Temporary frontend access. Authentication will be connected to Supabase later.</p><button className="auth-btn">Continue with Google</button><button className="auth-btn">Continue with email</button><button className="auth-btn">Continue with phone</button><Link className="btn wide" href="/dashboard">Open demo system</Link></div></main>}
