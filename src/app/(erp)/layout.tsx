@@ -1,0 +1,2 @@
+import Sidebar from '@/components/sidebar';import {requireMembership} from '@/lib/auth';
+export default async function ERPLayout({children}:{children:React.ReactNode}){const {user,membership}=await requireMembership();return <div className="erp"><Sidebar email={user.email||user.phone||'User'}/><main className="main"><header className="topbar"><span>{membership.branches?.name||'Branch'}</span><span className="badge">{String(membership.role).replaceAll('_',' ')}</span></header><div className="content">{children}</div></main></div>}
